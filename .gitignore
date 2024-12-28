@@ -1,0 +1,8 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+LN-history.sln.DotSettings
+LN-history.sln.DotSettings.user
+.idea

@@ -1,0 +1,5 @@
+- name: Build Docker Image
+  run: docker build -t fabianfelixkraus/ln-history:latest .
+
+- name: Push Docker Image
+  run: docker push fabianfelixkraus/ln-history:latest
