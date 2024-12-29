@@ -4,9 +4,11 @@ using LN_history.Api.Model;
 using LN_history.Cache.Services;
 using LN_history.Core.Helper;
 using LN_history.Core.Services;
+using LN_History.Model.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace LN_history.Api.Controllers;
 
@@ -17,12 +19,14 @@ public class LightningNetworkController : ControllerBase
 {
     private readonly ILightningNetworkService _lightningNetworkService;
     private readonly ILogger<LightningNetworkController> _logger;
+    private readonly LightningSettings _settings;
     
 
-    public LightningNetworkController(ILightningNetworkService lightningNetworkService, ILogger<LightningNetworkController> logger)
+    public LightningNetworkController(ILightningNetworkService lightningNetworkService, ILogger<LightningNetworkController> logger, IOptions<LightningSettings> options)
     {
         _lightningNetworkService = lightningNetworkService;
         _logger = logger;
+        _settings = options.Value;
     }
 
     /// <summary>
@@ -322,7 +326,7 @@ public class LightningNetworkController : ControllerBase
     {
         try
         {
-            var lightningNetwork = await _lightningNetworkService.GetLightningNetworkAsync(timestamp, paymentSizeSat: 10_000, cancellationToken: cancellationToken);
+            var lightningNetwork = await _lightningNetworkService.GetLightningNetworkAsync(timestamp, _settings.DefaultPaymentSizeSats, cancellationToken: cancellationToken);
             
             await _lightningNetworkService.ExportLightningNodeInformationAsync(timestamp, lightningNetwork, cancellationToken);
             

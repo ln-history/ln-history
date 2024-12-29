@@ -4,7 +4,7 @@ namespace LN_history.Core.Services;
 
 public interface ILightningNetworkService
 {
-    Task<LightningFastGraph> GetLightningNetworkAsync(DateTime timestamp, int paymentSizeSat = 10_000, CancellationToken cancellationToken = default);
+    Task<LightningFastGraph> GetLightningNetworkAsync(DateTime timestamp, int paymentSizeSat, CancellationToken cancellationToken = default);
     
     Task<int> GetNodeCountByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken);
     

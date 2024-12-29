@@ -12,6 +12,7 @@ using LN_history.Core.Mapping;
 using LN_history.Core.Services;
 using LN_history.Data;
 using LN_history.Data.Configuration;
+using LN_History.Model.Settings;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.OpenApi.Models;
@@ -30,6 +31,8 @@ FluentMapper.Initialize(configuration =>
     configuration.AddMap(new ChannelMessageCompleteConfiguration());
     configuration.ForDommel();
 });
+
+builder.Services.Configure<LightningSettings>(builder.Configuration.GetSection("LightningSettings"));
 
 builder.Services.AddCaching(builder.Configuration);
 

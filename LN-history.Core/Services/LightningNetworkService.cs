@@ -4,7 +4,9 @@ using LightningGraph.Model;
 using LN_history.Core.Helper;
 using LN_history.Data.DataStores;
 using LN_history.Data.Model;
+using LN_History.Model.Settings;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace LN_history.Core.Services;
 
@@ -16,25 +18,27 @@ public class LightningNetworkService : ILightningNetworkService
     private readonly ILightningNetworkDataStore _lightningNetworkDataStore;
     private readonly IImportLightningNetworkService _importLightningNetworkService;
     private readonly IExportLightningNetworkService _exportLightningNetworkService;
+    private readonly LightningSettings _settings;
     
-    public LightningNetworkService(IMapper mapper, INodeAnnouncementDataStore nodeAnnouncementDataStore, ILightningNetworkDataStore lightningNetworkDataStore, ILogger<ILightningNetworkService> logger, IExportLightningNetworkService exportLightningNetworkService, IImportLightningNetworkService importLightningNetworkService)
+    public LightningNetworkService(IMapper mapper, INodeAnnouncementDataStore nodeAnnouncementDataStore, ILightningNetworkDataStore lightningNetworkDataStore, ILogger<ILightningNetworkService> logger, IExportLightningNetworkService exportLightningNetworkService, IImportLightningNetworkService importLightningNetworkService, IOptions<LightningSettings> options)
     {
         _mapper = mapper;
         _logger = logger;
         _importLightningNetworkService = importLightningNetworkService;
+        _settings = options.Value;
         _exportLightningNetworkService = exportLightningNetworkService;
         _nodeAnnouncementDataStore = nodeAnnouncementDataStore;
         _lightningNetworkDataStore = lightningNetworkDataStore;
     }
 
-    public async Task<LightningFastGraph> GetLightningNetworkAsync(DateTime timestamp, int paymentSizeSat = 10_000, CancellationToken cancellationToken = default)
+    public async Task<LightningFastGraph> GetLightningNetworkAsync(DateTime timestamp, int paymentSizeSat, CancellationToken cancellationToken = default)
     {
         var lightningNetwork = await _importLightningNetworkService.ImportLightningNetworkByTimestamp(timestamp, cancellationToken);
 
         if (lightningNetwork == null)
         {
             _logger.LogInformation($"No topology of Lightning Network at timestamp {timestamp} found");
-            lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, HelperFunctions.DefaultTimespan, paymentSizeSat, cancellationToken);
+            lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, TimeSpan.FromDays(_settings.DefaultTimespanDays), paymentSizeSat, cancellationToken);
             await _exportLightningNetworkService.ExportLightningNetworkCompleteAsync(timestamp, lightningNetwork, cancellationToken);
         }
         else
@@ -52,7 +56,7 @@ public class LightningNetworkService : ILightningNetworkService
 
     public async Task<int> GetNodeCountByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var lightningNetwork = await GetLightningNetworkAsync(timestamp, cancellationToken: cancellationToken);
+        var lightningNetwork = await GetLightningNetworkAsync(timestamp, _settings.DefaultPaymentSizeSats, cancellationToken);
         
         var result = lightningNetwork.NodeCount;
 
@@ -61,7 +65,7 @@ public class LightningNetworkService : ILightningNetworkService
 
     public async Task<int> GetEdgeCountByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var lightningNetwork = await GetLightningNetworkAsync(timestamp, cancellationToken: cancellationToken);
+        var lightningNetwork = await GetLightningNetworkAsync(timestamp, _settings.DefaultPaymentSizeSats, cancellationToken);
         
         var result = lightningNetwork.EdgeCount;
 
@@ -99,8 +103,8 @@ public class LightningNetworkService : ILightningNetworkService
     {
         var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(
             timestamp, 
-            HelperFunctions.DefaultTimespan, 
-            10_000,
+            TimeSpan.FromDays(_settings.DefaultTimespanDays), 
+            _settings.DefaultPaymentSizeSats,
             cancellationToken);
 
         _logger.LogInformation($"Start analysis for NetworkMetrics at timestamp {timestamp}");
@@ -118,8 +122,8 @@ public class LightningNetworkService : ILightningNetworkService
     {
         var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(
             timestamp, 
-            HelperFunctions.DefaultTimespan, 
-            10_000,
+            TimeSpan.FromDays(_settings.DefaultTimespanDays), 
+            _settings.DefaultPaymentSizeSats,
             cancellationToken);
 
         // var bridgeAnalysis = lightningNetwork.AnalyzeBridges();
@@ -171,7 +175,7 @@ public class LightningNetworkService : ILightningNetworkService
 
     public async Task ExportLightningNetworkByTimestampAsync(DateTime timestamp, int paymentSizeSat, CancellationToken cancellationToken)
     {
-        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, HelperFunctions.DefaultTimespan, paymentSizeSat, cancellationToken);
+        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, TimeSpan.FromDays(_settings.DefaultTimespanDays), paymentSizeSat, cancellationToken);
         
         await _exportLightningNetworkService.ExportLightningNetworkTopologyByTimestampAsync(timestamp, lightningNetwork, cancellationToken);
     }
@@ -195,7 +199,7 @@ public class LightningNetworkService : ILightningNetworkService
     {
         // var lightningNetwork = await GetLightningNetworkAsync(timestamp, cancellationToken, paymentSizeSat);
 
-        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, HelperFunctions.DefaultTimespan, paymentSizeSat, cancellationToken);
+        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, TimeSpan.FromDays(_settings.DefaultTimespanDays), paymentSizeSat, cancellationToken);
         
         // return lightningNetwork.AnalyzeCentrality().AverageCentrality;
 
@@ -206,7 +210,7 @@ public class LightningNetworkService : ILightningNetworkService
     {
         // var lightningNetwork = await GetLightningNetworkAsync(timestamp, cancellationToken, paymentSizeSat);
 
-        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, HelperFunctions.DefaultTimespan, paymentSizeSat, cancellationToken);
+        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, TimeSpan.FromDays(_settings.DefaultTimespanDays), paymentSizeSat, cancellationToken);
         
         // return lightningNetwork.AnalyzeCentralityMonteCarlo().AverageCentrality;
 
