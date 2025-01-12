@@ -5,5 +5,5 @@ namespace LN_history.Core.Services;
 public interface IImportLightningNetworkService
 {
     Task<LightningFastGraph?>
-        ImportLightningNetworkByTimestamp(DateTime timestamp, CancellationToken cancellationToken);
+        ImportLightningNetworkByTimestamp(string bucketName, DateTime timestamp, CancellationToken cancellationToken);
 }

@@ -1,161 +1,142 @@
-// using LightningGraph.Core;
-// using LightningGraph.GraphAlgorithms.Common;
-// using LightningGraph.Implementations;
-// using LightningGraph.Model;
-//
-// namespace LightningGraph.GraphAlgorithms.Connectivity;
-//
-// public static class BridgeDetector
-// {
-//     public static BridgeAnalysis Analyze(FastLightningGraph graph)
-//     {
-//         var bridges = FindBridges(graph);
-//         var componentsAfterRemoval = CountComponentsAfterRemoval(graph, bridges);
-//         var criticalityScore = CalculateCriticality(graph, bridges);
-//
-//         return new BridgeAnalysis
-//         {
-//             BridgeCount = bridges.Count,
-//             Bridges = bridges,
-//             ComponentsAfterRemoval = componentsAfterRemoval,
-//             CriticalityScore = criticalityScore
-//         };
-//     }
-//
-//     private static int CountComponentsAfterRemoval(
-//         FastLightningGraph graph,
-//         List<(int From, int To)> bridges)
-//     {
-//         // Create a working set of edges to consider
-//         var validEdges = new HashSet<(int, int)>();
-//         var bridgeSet = new HashSet<(int, int)>(bridges);
-//
-//         // Add all non-bridge edges to the working set
-//         foreach (var edge in graph.Edges)
-//         {
-//             var normalizedEdge = (Math.Min(edge.From, edge.To), Math.Max(edge.From, edge.To));
-//             if (!bridgeSet.Contains(normalizedEdge))
-//             {
-//                 validEdges.Add(normalizedEdge);
-//             }
-//         }
-//
-//         // Use DFS to count components
-//         var visited = new bool[graph.VertexCount];
-//         int components = 0;
-//
-//         foreach (var vertex in graph.Vertices)
-//         {
-//             if (!visited[vertex])
-//             {
-//                 ComponentDFS(graph, vertex, visited, validEdges);
-//                 components++;
-//             }
-//         }
-//
-//         return components;
-//     }
-//     
-//     // ReSharper disable once InconsistentNaming
-//     private static void ComponentDFS(
-//         FastLightningGraph graph,
-//         int current,
-//         bool[] visited,
-//         HashSet<(int, int)> validEdges)
-//     {
-//         visited[current] = true;
-//
-//         foreach (var neighbor in graph.GetNeighbors(current))
-//         {
-//             var edge = (Math.Min(current, neighbor), Math.Max(current, neighbor));
-//             if (!visited[neighbor] && validEdges.Contains(edge))
-//             {
-//                 ComponentDFS(graph, neighbor, visited, validEdges);
-//             }
-//         }
-//     }
-//
-//     public static List<(int From, int To)> FindBridges(
-//         FastLightningGraph graph)
-//     {
-//         var bridges = new List<(int, int)>();
-//         var lowTime = new int[graph.VertexCount];
-//         Array.Fill(lowTime, -1);
-//
-//         var dfs = new DfsSearchTraversal();
-//
-//         void PreVisit(int vertex)
-//         {
-//             lowTime[vertex] = dfs.GetTraversalState().DiscoveryTime[vertex];
-//         }
-//
-//         void OnEdgeTraversal(int from, int to)
-//         {
-//             var state = dfs.GetTraversalState();
-//             
-//             if (state.Parent[from] != to) // Back edge
-//             {
-//                 lowTime[from] = Math.Min(lowTime[from], state.DiscoveryTime[to]);
-//             }
-//             else if (state.Parent[to] == from) // Tree edge
-//             {
-//                 if (lowTime[to] > state.DiscoveryTime[from])
-//                 {
-//                     bridges.Add((Math.Min(from, to), Math.Max(from, to)));
-//                 }
-//                 lowTime[from] = Math.Min(lowTime[from], lowTime[to]);
-//             }
-//         }
-//
-//         foreach (var vertex in graph.Vertices)
-//         {
-//             if (!dfs.GetTraversalState()?.Visited[vertex] ?? true)
-//             {
-//                 dfs.TraverseGraph(graph, vertex, PreVisit, onEdgeTraversal: OnEdgeTraversal);
-//             }
-//         }
-//
-//         return bridges;
-//     }
-//
-//     // ReSharper disable once InconsistentNaming
-//     private static void DFSBridge(
-//         FastLightningGraph graph,
-//         int current,
-//         int parent,
-//         bool[] visited,
-//         int[] discoveryTime,
-//         int[] lowTime,
-//         ref int time,
-//         List<(int, int)> bridges)
-//     {
-//         visited[current] = true;
-//         discoveryTime[current] = lowTime[current] = ++time;
-//
-//         foreach (int neighbor in graph.GetNeighbors(current))
-//         {
-//             if (!visited[neighbor])
-//             {
-//                 DFSBridge(graph, neighbor, current, visited, discoveryTime, lowTime, ref time, bridges);
-//
-//                 lowTime[current] = Math.Min(lowTime[current], lowTime[neighbor]);
-//
-//                 if (lowTime[neighbor] > discoveryTime[current])
-//                 {
-//                     bridges.Add((Math.Min(current, neighbor), Math.Max(current, neighbor)));
-//                 }
-//             }
-//             else if (neighbor != parent)
-//             {
-//                 lowTime[current] = Math.Min(lowTime[current], discoveryTime[neighbor]);
-//             }
-//         }
-//     }
-//
-//     private static double CalculateCriticality(
-//         FastLightningGraph graph,
-//         List<(int, int)> bridges)
-//     {
-//         return graph.EdgeCount > 0 ? (double)bridges.Count / graph.EdgeCount : 0;
-//     }
-// }
+using LightningGraph.Core;
+using LightningGraph.Model;
+
+namespace LightningGraph.GraphAlgorithms.Connectivity;
+
+public static class BridgeDetector
+{
+    public static BridgeAnalysis Analyze(LightningFastGraph graph)
+    {
+        var bridges = FindBridges(graph);
+        var componentsAfterRemoval = CountComponentsAfterRemoval(graph, bridges);
+        var criticalityScore = CalculateCriticality(graph, bridges);
+
+        return new BridgeAnalysis
+        {
+            BridgeCount = bridges.Count,
+            Bridges = bridges,
+            ComponentsAfterRemoval = componentsAfterRemoval,
+            CriticalityScore = criticalityScore
+        };
+    }
+
+    private static int CountComponentsAfterRemoval(
+        LightningFastGraph graph,
+        List<(string From, string To)> bridges)
+    {
+        var nodes = graph.GetNodes().ToHashSet();
+        var validEdges = new HashSet<(string, string)>();
+        
+        foreach (var node in nodes)
+        {
+            foreach (var edge in graph.GetOutgoingEdges(node))
+            {
+                if (!bridges.Contains((edge.From, edge.To)) && 
+                    !bridges.Contains((edge.To, edge.From)))
+                {
+                    validEdges.Add((edge.From, edge.To));
+                }
+            }
+        }
+
+        var visited = new HashSet<string>();
+        var components = 0;
+
+        foreach (var node in nodes)
+        {
+            if (!visited.Contains(node))
+            {
+                ComponentDFS(graph, node, visited, validEdges);
+                components++;
+            }
+        }
+
+        return components;
+    }
+
+    // ReSharper disable once InconsistentNaming
+    private static void ComponentDFS(
+        LightningFastGraph graph,
+        string current,
+        HashSet<string> visited,
+        HashSet<(string, string)> validEdges)
+    {
+        visited.Add(current);
+
+        foreach (var edge in graph.GetOutgoingEdges(current))
+        {
+            if (!visited.Contains(edge.To) && 
+                validEdges.Contains((current, edge.To)))
+            {
+                ComponentDFS(graph, edge.To, visited, validEdges);
+            }
+        }
+    }
+
+    public static List<(string From, string To)> FindBridges(LightningFastGraph graph)
+    {
+        var visited = new HashSet<string>();
+        var discoveryTime = new Dictionary<string, int>();
+        var lowTime = new Dictionary<string, int>();
+        var bridges = new List<(string, string)>();
+        var time = 0;
+
+        foreach (var node in graph.GetNodes())
+        {
+            if (!visited.Contains(node))
+            {
+                DFSBridge(graph, node, null, visited, discoveryTime, lowTime, 
+                         ref time, bridges);
+            }
+        }
+
+        return bridges;
+    }
+
+    // ReSharper disable once InconsistentNaming
+    private static void DFSBridge(
+        LightningFastGraph graph,
+        string current,
+        string parent,
+        HashSet<string> visited,
+        Dictionary<string, int> discoveryTime,
+        Dictionary<string, int> lowTime,
+        ref int time,
+        List<(string, string)> bridges)
+    {
+        visited.Add(current);
+        discoveryTime[current] = lowTime[current] = ++time;
+
+        foreach (var edge in graph.GetOutgoingEdges(current))
+        {
+            var neighbor = edge.To;
+            
+            if (neighbor == parent) continue;
+
+            if (!visited.Contains(neighbor))
+            {
+                DFSBridge(graph, neighbor, current, visited, discoveryTime, 
+                         lowTime, ref time, bridges);
+
+                lowTime[current] = Math.Min(lowTime[current], lowTime[neighbor]);
+
+                if (lowTime[neighbor] > discoveryTime[current])
+                {
+                    bridges.Add((current, neighbor));
+                }
+            }
+            else
+            {
+                lowTime[current] = Math.Min(lowTime[current], 
+                                          discoveryTime[neighbor]);
+            }
+        }
+    }
+
+    private static double CalculateCriticality(
+        LightningFastGraph graph,
+        List<(string, string)> bridges)
+    {
+        return graph.EdgeCount > 0 ? (double)bridges.Count / graph.EdgeCount : 0;
+    }
+}

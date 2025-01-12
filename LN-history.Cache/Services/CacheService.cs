@@ -44,11 +44,11 @@ public class CacheService : ICacheService
 
                 await _minioClient.StatObjectAsync(statObjectArgs, cancellationToken);
 
-                return true; // Object exists
+                return true;
             }
             catch (ObjectNotFoundException)
             {
-                return false; // Object does not exist
+                return false;
             }
         }
         catch (Exception e)
@@ -57,80 +57,72 @@ public class CacheService : ICacheService
             return false; // Return false in case of any unexpected error
         }
     }
-
-    public async Task<LightningFastGraph> GetGraphAsync(string bucketId, string objectName, 
-        CancellationToken cancellationToken)
+    
+    public async Task<byte[]?> GetGraphTopologyUsingRpcAsync(string bucketName, string objectName, CancellationToken cancellationToken)
     {
         try
         {
-            _logger.LogInformation("Start retrieving graph from bucket {BucketId}, object {ObjectName}", bucketId, objectName); 
-            
-            var graphJson = new StringBuilder();
-            
-            GetObjectArgs getObjectArgs = new GetObjectArgs()
-                .WithBucket(bucketId)
+            _logger.LogInformation("Start retrieving binary data from bucket {BucketId}, object {ObjectName}", 
+                bucketName, objectName);
+
+            using var memStream = new MemoryStream();
+
+            var getObjectArgs = new GetObjectArgs()
+                .WithBucket(bucketName)
                 .WithObject(objectName)
-                .WithCallbackStream((stream) =>
+                .WithCallbackStream(stream =>
                 {
-                    using var reader = new StreamReader(stream);
-                    _logger.LogInformation("Reading stream for object {ObjectName}", objectName);
-
-                    var content = reader.ReadToEnd();
-                    graphJson.Append(content);
-                    
-                    if (string.IsNullOrWhiteSpace(content))
-                    {
-                        _logger.LogWarning("The object content is empty. Cannot deserialize an empty graph.");
-                        throw new Exception("Invalid reading from MinIO bucket.");
-                    }
-
-                    _logger.LogInformation("Stream read successfully. Content length: {ContentLength}", content.Length);
+                    // ReSharper disable once AccessToDisposedClosure
+                    stream.CopyTo(memStream);
                 });
-            await _minioClient.GetObjectAsync(getObjectArgs, cancellationToken);
-            
-            _logger.LogInformation("Object {ObjectName} retrieved successfully from bucket {BucketId}", objectName, bucketId);
-            
-            // Deserialize the graph from JSON
-            var deserializedGraph = LightningFastGraphDeserializationService.Deserialize(graphJson.ToString());
-            _logger.LogInformation("Graph deserialized successfully for object {ObjectName}", objectName);
 
-            return deserializedGraph;
+            await _minioClient.GetObjectAsync(getObjectArgs, cancellationToken);
+
+            _logger.LogInformation("Successfully retrieved data of size {Size} bytes from {Bucket}/{Object}",
+                memStream.Length, bucketName, objectName);
+
+            return memStream.ToArray();
+        }
+        catch (ObjectNotFoundException)
+        {
+            _logger.LogWarning("Object not found in bucket {BucketId}, object {ObjectName}",
+                bucketName, objectName);
+            return null;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error retrieving graph. BucketId: {BucketId}, ObjectName: {ObjectName}", bucketId, objectName);
+            _logger.LogError(ex, "Error retrieving data from {BucketId}/{ObjectName}",
+                bucketName, objectName);
             throw;
         }
     }
 
     
-    public async Task StoreGraphAsync(string bucketId, string objectName, LightningFastGraph graph, 
-        CancellationToken cancellationToken)
+    public async Task StoreGraphTopologyUsingRpcAsync(byte[] data, string bucketName, string objectName, CancellationToken cancellationToken)
     {
         try
         {
-            _logger.LogInformation($"Storing graph in bucket {bucketId} as object: {objectName}");
+            _logger.LogInformation("Start storing binary data to bucket {BucketId}, object {ObjectName}", 
+                bucketName, objectName);
 
-            // Serialize graph and Convert to byte array
-            var graphBytes = Encoding.UTF8.GetBytes(graph.SerializeToJson(objectName));
-            using var stream = new MemoryStream(graphBytes);
+            using var memStream = new MemoryStream(data);
 
-            // Store object in MinIO
             var putObjectArgs = new PutObjectArgs()
-                .WithBucket(bucketId)
+                .WithBucket(bucketName)
                 .WithObject(objectName)
-                .WithStreamData(stream)
-                .WithObjectSize(graphBytes.Length)
-                .WithContentType("application/json");
+                .WithStreamData(memStream)
+                .WithObjectSize(data.Length)
+                .WithContentType("application/octet-stream");
 
             await _minioClient.PutObjectAsync(putObjectArgs, cancellationToken);
 
-            _logger.LogInformation($"Graph stored successfully in bucket {bucketId}, object: {objectName}");
+            _logger.LogInformation("Successfully stored data of size {Size} bytes to {Bucket}/{Object}",
+                data.Length, bucketName, objectName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error storing graph. BucketId: {BucketId}, ObjectName: {ObjectName}", 
-                bucketId, objectName);
+            _logger.LogError(ex, "Error storing data to {BucketId}/{ObjectName}",
+                bucketName, objectName);
             throw;
         }
     }

@@ -36,7 +36,7 @@ builder.Services.Configure<LightningSettings>(builder.Configuration.GetSection("
 
 builder.Services.AddCaching(builder.Configuration);
 
-builder.Services.AddLightningNetworkServices();
+builder.Services.AddLightningNetworkServices(builder.Configuration);
 builder.Services.AddBitcoinServices();
 
 builder.Services.AddApiServices(

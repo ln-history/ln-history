@@ -1,7 +1,6 @@
-using AutoMapper;
+using LightningGraph.Model;
 using LN_history.Api.Authorization;
 using LN_history.Api.Model;
-using LN_history.Cache.Services;
 using LN_history.Core.Helper;
 using LN_history.Core.Services;
 using LN_History.Model.Settings;
@@ -18,14 +17,21 @@ namespace LN_history.Api.Controllers;
 public class LightningNetworkController : ControllerBase
 {
     private readonly ILightningNetworkService _lightningNetworkService;
+    private readonly ILightningNetworkAnalyticalService _lightningNetworkAnalyticalService;
+    private readonly ILightningNetworkSimulationService _lightningNetworkSimulationService;
+    private readonly ILightningNetworkMetricsService _lightningNetworkMetricsService;
+    
     private readonly ILogger<LightningNetworkController> _logger;
     private readonly LightningSettings _settings;
     
 
-    public LightningNetworkController(ILightningNetworkService lightningNetworkService, ILogger<LightningNetworkController> logger, IOptions<LightningSettings> options)
+    public LightningNetworkController(ILightningNetworkService lightningNetworkService, ILogger<LightningNetworkController> logger, IOptions<LightningSettings> options, ILightningNetworkAnalyticalService lightningNetworkAnalyticalService, ILightningNetworkSimulationService lightningNetworkSimulationService, ILightningNetworkMetricsService lightningNetworkMetricsService)
     {
         _lightningNetworkService = lightningNetworkService;
         _logger = logger;
+        _lightningNetworkAnalyticalService = lightningNetworkAnalyticalService;
+        _lightningNetworkSimulationService = lightningNetworkSimulationService;
+        _lightningNetworkMetricsService = lightningNetworkMetricsService;
         _settings = options.Value;
     }
 
@@ -35,7 +41,7 @@ public class LightningNetworkController : ControllerBase
     /// <param name="timestamp">timestamp in ISO 8601 format</param>
     /// <param name="cancellationToken"></param>
     /// <returns><see cref="int"/></returns>
-    [HttpGet("nodes/count/fast/{timestamp}")]
+    [HttpGet("nodes/count/{timestamp}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<int>> GetNodeCountByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
@@ -49,7 +55,7 @@ public class LightningNetworkController : ControllerBase
     /// <param name="timestamp">timestamp in ISO 8601 format</param>
     /// <param name="cancellationToken"></param>
     /// <returns><see cref="int"/></returns>
-    [HttpGet("edgeCount/{timestamp}")]
+    [HttpGet("edges/count/{timestamp}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<int>> GetEdgeCountByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
@@ -57,77 +63,77 @@ public class LightningNetworkController : ControllerBase
         return Ok(result);
     }
 
-    // /// <summary>
-    // /// Gets median transaction cost for a payment of size paymentSizeSat in the Lightning Network by timestamp using a Monte Carlo Simulation
-    // /// </summary>
-    // /// <param name="paymentSizeSat">paymentSize in satoshis (sats)</param>
-    // /// <param name="timestamp">timestamp in ISO 8601 format</param>
-    // /// <param name="cancellationToken"></param>
-    // /// <returns><see cref="double"/></returns>
-    // [HttpGet("simulateMedian/{timestamp}")]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // public async Task<ActionResult<double>> GetMedianTransactionCostByTimestampUsingSimulation(int paymentSizeSat, DateTime timestamp,
-    //     CancellationToken cancellationToken)
-    // {
-    //     var results = await _lightningNetworkSimulationService.SimulatePaymentsByPaymentSizeAndTimestampWithMonteCarlo(paymentSizeSat, timestamp, cancellationToken);
-    //     var result = HelperFunctions.CalculateMedian(results.ToList());
-    //     
-    //     return Ok(result);
-    // }
-    //
-    // /// <summary>
-    // /// Gets average transaction cost for a payment of size paymentSizeSat in the Lightning Network by timestamp using a Monte Carlo Simulation
-    // /// </summary>
-    // /// <param name="paymentSizeSat">paymentSize in satoshis (sats)</param>
-    // /// <param name="timestamp">timestamp in ISO 8601 format</param>
-    // /// <param name="cancellationToken"></param>
-    // /// <returns><see cref="double"/></returns>
-    // [HttpGet("simulateAverage{timestamp}")]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // public async Task<ActionResult<double>> GetAverageTransactionCostByTimestampUsingSimulation(int paymentSizeSat, DateTime timestamp,
-    //     CancellationToken cancellationToken)
-    // {
-    //     var results = await _lightningNetworkSimulationService.SimulatePaymentsByPaymentSizeAndTimestampWithMonteCarlo(paymentSizeSat, timestamp, cancellationToken);
-    //     var result = HelperFunctions.CalculateAverage(results.ToList());
-    //     
-    //     return Ok(result);
-    // }
-    //
-    // /// <summary>
-    // /// Gets median transaction cost for a payment of size paymentSizeSat in the Lightning Network by timestamp using a formula
-    // /// </summary>
-    // /// <param name="paymentSizeSat">paymentSize in satoshis (sats)</param>
-    // /// <param name="timestamp">timestamp in ISO 8601 format</param>
-    // /// <param name="cancellationToken"></param>
-    // /// <returns><see cref="double"/></returns>
-    // [HttpGet("calculateMedian/{timestamp}")]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // public async Task<ActionResult<double>> GetMedianTransactionCostByTimestampUsingCalculation(int paymentSizeSat, DateTime timestamp,
-    //     CancellationToken cancellationToken)
-    // {
-    //     var results = await _lightningNetworkAnalyticalService.CalculateAllShortestPathCostsByPaymentSizeAndTimestamp(paymentSizeSat, timestamp, cancellationToken);
-    //     var result = HelperFunctions.CalculateMedian(results.ToList());
-    //     
-    //     return Ok(result);
-    // }
-    //
-    // /// <summary>
-    // /// Gets average transaction cost for a payment of size paymentSizeSat in the Lightning Network by timestamp using a formula
-    // /// </summary>
-    // /// <param name="paymentSizeSat">paymentSize in satoshis (sats)</param>
-    // /// <param name="timestamp">timestamp in ISO 8601 format</param>
-    // /// <param name="cancellationToken"></param>
-    // /// <returns><see cref="double"/></returns>
-    // [HttpGet("calculateAverage/{timestamp}")]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // public async Task<ActionResult<double>> GetAverageTransactionCostByTimestampUsingCalculation(int paymentSizeSat, DateTime timestamp,
-    //     CancellationToken cancellationToken)
-    // {
-    //     var results = await _lightningNetworkAnalyticalService.CalculateAllShortestPathCostsByPaymentSizeAndTimestamp(paymentSizeSat, timestamp, cancellationToken);
-    //     var result = HelperFunctions.CalculateAverage(results.ToList());
-    //     
-    //     return Ok(result);
-    // }
+    /// <summary>
+    /// Gets median transaction cost for a payment of size paymentSizeSat in the Lightning Network by timestamp using a Monte Carlo Simulation
+    /// </summary>
+    /// <param name="paymentSizeSat">paymentSize in satoshis (sats)</param>
+    /// <param name="timestamp">timestamp in ISO 8601 format</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns><see cref="double"/></returns>
+    [HttpGet("simulateMedian/{timestamp}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<double>> GetMedianTransactionCostByTimestampUsingSimulation(int paymentSizeSat, DateTime timestamp,
+        CancellationToken cancellationToken)
+    {
+        var results = await _lightningNetworkSimulationService.SimulatePaymentsByPaymentSizeAndTimestampWithMonteCarlo(paymentSizeSat, timestamp, cancellationToken);
+        var result = HelperFunctions.CalculateMedian(results.ToList());
+        
+        return Ok(result);
+    }
+    
+    /// <summary>
+    /// Gets average transaction cost for a payment of size paymentSizeSat in the Lightning Network by timestamp using a Monte Carlo Simulation
+    /// </summary>
+    /// <param name="paymentSizeSat">paymentSize in satoshis (sats)</param>
+    /// <param name="timestamp">timestamp in ISO 8601 format</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns><see cref="double"/></returns>
+    [HttpGet("simulateAverage{timestamp}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<double>> GetAverageTransactionCostByTimestampUsingSimulation(int paymentSizeSat, DateTime timestamp,
+        CancellationToken cancellationToken)
+    {
+        var results = await _lightningNetworkSimulationService.SimulatePaymentsByPaymentSizeAndTimestampWithMonteCarlo(paymentSizeSat, timestamp, cancellationToken);
+        var result = HelperFunctions.CalculateAverage(results.ToList());
+        
+        return Ok(result);
+    }
+    
+    /// <summary>
+    /// Gets median transaction cost for a payment of size paymentSizeSat in the Lightning Network by timestamp using a formula
+    /// </summary>
+    /// <param name="paymentSizeSat">paymentSize in satoshis (sats)</param>
+    /// <param name="timestamp">timestamp in ISO 8601 format</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns><see cref="double"/></returns>
+    [HttpGet("calculateMedian/{timestamp}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<double>> GetMedianTransactionCostByTimestampUsingCalculation(int paymentSizeSat, DateTime timestamp,
+        CancellationToken cancellationToken)
+    {
+        var results = await _lightningNetworkAnalyticalService.CalculateAllShortestPathCostsByPaymentSizeAndTimestamp(paymentSizeSat, timestamp, cancellationToken);
+        var result = HelperFunctions.CalculateMedian(results.ToList());
+        
+        return Ok(result);
+    }
+    
+    /// <summary>
+    /// Gets average transaction cost for a payment of size paymentSizeSat in the Lightning Network by timestamp using a formula
+    /// </summary>
+    /// <param name="paymentSizeSat">paymentSize in satoshis (sats)</param>
+    /// <param name="timestamp">timestamp in ISO 8601 format</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns><see cref="double"/></returns>
+    [HttpGet("calculateAverage/{timestamp}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<double>> GetAverageTransactionCostByTimestampUsingCalculation(int paymentSizeSat, DateTime timestamp,
+        CancellationToken cancellationToken)
+    {
+        var results = await _lightningNetworkAnalyticalService.CalculateAllShortestPathCostsByPaymentSizeAndTimestamp(paymentSizeSat, timestamp, cancellationToken);
+        var result = HelperFunctions.CalculateAverage(results.ToList());
+        
+        return Ok(result);
+    }
     
     /// <summary>
     /// Gets the diameter of the Lightning Network by timestamp.
@@ -140,7 +146,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetDiameterOfLightningNetworkByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkService.GetDiameterByTimestampAsync(timestamp, cancellationToken);
+        var result = await _lightningNetworkMetricsService.GetDiameterByTimestampAsync(timestamp, cancellationToken);
         
         return Ok(result);
     }
@@ -155,7 +161,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetAveragePathLengthOfLightningNetworkByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkService.GetAveragePathLengthByTimestampAsync(timestamp, cancellationToken);
+        var result = await _lightningNetworkMetricsService.GetAveragePathLengthByTimestampAsync(timestamp, cancellationToken);
         
         return Ok(result);
     }
@@ -170,8 +176,24 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetAverageDegreeOfLightningNetworkByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkService.GetAverageDegreeByTimestampAsync(timestamp, cancellationToken);
+        var result = await _lightningNetworkMetricsService.GetAverageDegreeByTimestampAsync(timestamp, cancellationToken);
         
+        return Ok(result);
+    }
+    
+    /// <summary>
+    /// Gets the global clustering coefficient of the Lightning Network by timestamp.
+    /// The local clustering coefficient of a node quantifies how close its neighbours are to being a clique.
+    /// </summary>
+    /// <param name="timestamp">timestamp in ISO 8601 format</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns><see cref="double"/></returns>
+    [HttpGet("clusteringCoefficient/local/avg/{timestamp}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<double>> GetAverageLocalClusteringCoefficientOfLightningNetworkByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
+    {
+        var result = await _lightningNetworkMetricsService.GetAverageLocalClusteringCoefficientByTimestampAsync(timestamp, cancellationToken);
+
         return Ok(result);
     }
     
@@ -182,11 +204,11 @@ public class LightningNetworkController : ControllerBase
     /// <param name="timestamp">timestamp in ISO 8601 format</param>
     /// <param name="cancellationToken"></param>
     /// <returns><see cref="double"/></returns>
-    [HttpGet("clusteringCOefficient/{timestamp}")]
+    [HttpGet("clusteringCoefficient/global/{timestamp}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetGlobalClusteringCoefficientOfLightningNetworkByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkService.GetGlobalClusteringCoefficientByTimestampAsync(timestamp, cancellationToken);
+        var result = await _lightningNetworkMetricsService.GetGlobalClusteringCoefficientByTimestampAsync(timestamp, cancellationToken);
 
         return Ok(result);
     }
@@ -203,7 +225,22 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetDensityOfLightningNetworkByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkService.GetDensityByTimestampAsync(timestamp, cancellationToken);
+        var result = await _lightningNetworkMetricsService.GetDensityByTimestampAsync(timestamp, cancellationToken);
+
+        return Ok(result);
+    }
+    
+    /// <summary>
+    /// Gets <see cref="NetworkMetrics"/> of the Lightning Network by timestamp.
+    /// </summary>
+    /// <param name="timestamp">timestamp in ISO 8601 format</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns><see cref="double"/></returns>
+    [HttpGet("metrics/{timestamp}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<double>> GetNetworkMetricsOfLightningNetworkByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
+    {
+        var result = await _lightningNetworkMetricsService.GetNetworkMetricsByTimestampAsync(timestamp, cancellationToken);
 
         return Ok(result);
     }

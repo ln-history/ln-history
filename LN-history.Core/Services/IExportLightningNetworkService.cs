@@ -5,10 +5,10 @@ namespace LN_history.Core.Services;
 
 public interface IExportLightningNetworkService
 {
-    Task ExportLightningNetworkCompleteAsync(DateTime timestamp, LightningFastGraph lightningNetwork,
+    Task ExportLightningNetworkCompleteAsync(string bucketName, DateTime timestamp, LightningFastGraph lightningNetwork,
         CancellationToken cancellationToken);
     
-    Task ExportLightningNetworkTopologyByTimestampAsync(DateTime timestamp, LightningFastGraph lightningNetwork,
+    Task ExportLightningNetworkTopologyByTimestampAsync(string bucketName, DateTime timestamp, LightningFastGraph lightningNetwork,
         CancellationToken cancellationToken);
 
     Task ExportLightningNodeInformationByTimestampAsync(DateTime timestamp, IEnumerable<NodeInformation> nodes,

@@ -1,20 +1,22 @@
 using System.Text.Json;
+using LightningGraph.GraphAlgorithms.Connectivity;
+using LightningGraph.GraphAlgorithms.Metrics;
 using LightningGraph.Model;
+using LightningGraph.Serialization;
 using LN_history.Data.Model;
 
 namespace LightningGraph.Core;
 
 public class LightningFastGraph
 {
-    private readonly Dictionary<string, List<Edge>> _adjacencyList = new();
-    private readonly Dictionary<string, List<Edge>> _reverseAdjacencyList = new();
+    public Dictionary<string, List<Edge>> AdjacencyList = new();
+    public Dictionary<string, List<Edge>> ReverseAdjacencyList = new();
     private int _edgeCount = 0;
 
-    public readonly Dictionary<string, NodeInformation> _nodeInformationDict = new();
-    public readonly Dictionary<string, ChannelInformation> _edgeInformationDict = new();
-
+    public readonly Dictionary<string, NodeInformation> NodeInformationDict = new();
+    public readonly Dictionary<string, ChannelInformation> EdgeInformationDict = new();
     
-    public int NodeCount => _adjacencyList.Count;
+    public int NodeCount => AdjacencyList.Count;
 
     public int EdgeCount => _edgeCount;
 
@@ -28,17 +30,17 @@ public class LightningFastGraph
             Weight = new Weight { BaseMSat = baseWeight, ProportionalMillionths = proportionalWeight }
         };
 
-        if (!_adjacencyList.ContainsKey(from))
+        if (!AdjacencyList.ContainsKey(from))
         {
-            _adjacencyList[from] = new List<Edge>();
+            AdjacencyList[from] = new List<Serialization.Edge>();
         }
-        if (!_reverseAdjacencyList.ContainsKey(to))
+        if (!ReverseAdjacencyList.ContainsKey(to))
         {
-            _reverseAdjacencyList[to] = new List<Edge>();
+            ReverseAdjacencyList[to] = new List<Serialization.Edge>();
         }
 
-        _adjacencyList[from].Add(edge);
-        _reverseAdjacencyList[to].Add(edge);
+        AdjacencyList[from].Add(edge);
+        ReverseAdjacencyList[to].Add(edge);
         _edgeCount++;
     }
 
@@ -48,7 +50,7 @@ public class LightningFastGraph
         foreach (var nodeInfo in validNodes)
         {
             // Store node information in the dictionary
-            _nodeInformationDict[nodeInfo.NodeId] = new NodeInformation()
+            NodeInformationDict[nodeInfo.NodeId] = new NodeInformation()
             {
                 NodeId = nodeInfo.NodeId,
                 Features = nodeInfo.Features,
@@ -58,9 +60,9 @@ public class LightningFastGraph
             };
 
             // Ensure the node exists in the adjacency list
-            if (!_adjacencyList.ContainsKey(nodeInfo.NodeId))
+            if (!AdjacencyList.ContainsKey(nodeInfo.NodeId))
             {
-                _adjacencyList[nodeInfo.NodeId] = new List<Edge>();
+                AdjacencyList[nodeInfo.NodeId] = new List<Edge>();
             }
         }
     }
@@ -78,7 +80,7 @@ public class LightningFastGraph
             AddEdge(channelInfo.NodeId1, channelInfo.NodeId2, channelInfo.Scid, baseWeight, proportionalWeight);
 
             // Store edge information in the dictionary
-            _edgeInformationDict[channelInfo.Scid] = new ChannelInformation()
+            EdgeInformationDict[channelInfo.Scid] = new ChannelInformation()
             {
                 Scid = channelInfo.Scid,
                 Features = channelInfo.Features,
@@ -99,12 +101,12 @@ public class LightningFastGraph
 
     public IEnumerable<string> GetNodes()
     {
-        return _adjacencyList.Keys;
+        return AdjacencyList.Keys;
     }
 
     public (string[] Neighbors, long[] Weights) GetNeighbors(string nodeId)
     {
-        if (!_adjacencyList.TryGetValue(nodeId, out var edges)) return (Array.Empty<string>(), Array.Empty<long>());
+        if (!AdjacencyList.TryGetValue(nodeId, out var edges)) return (Array.Empty<string>(), Array.Empty<long>());
         return (
             edges.Select(e => e.To).ToArray(),
             edges.Select(e => e.Weight.BaseMSat + e.Weight.ProportionalMillionths).ToArray()
@@ -113,50 +115,113 @@ public class LightningFastGraph
 
     public int GetDegree(string nodeId)
     {
-        return _adjacencyList.ContainsKey(nodeId) ? _adjacencyList[nodeId].Count : 0;
+        return AdjacencyList.ContainsKey(nodeId) ? AdjacencyList[nodeId].Count : 0;
     }
 
     public int GetInDegree(string nodeId)
     {
-        return _reverseAdjacencyList.ContainsKey(nodeId) ? _reverseAdjacencyList[nodeId].Count : 0;
+        return ReverseAdjacencyList.ContainsKey(nodeId) ? ReverseAdjacencyList[nodeId].Count : 0;
     }
 
     public int GetOutDegree(string nodeId)
     {
         return GetDegree(nodeId);
     }
-
-    public string SerializeToJson(string graphName)
+    
+    public IEnumerable<Edge> GetOutgoingEdges(string nodeId)
     {
-        var topology = new Topology
-        {
-            Metadata = new Metadata
-            {
-                CreatedAt = DateTime.UtcNow,
-                GraphName = graphName,
-                NumberOfNodes = NodeCount,
-                NumberOfEdges = EdgeCount
-            },
-            Data = _adjacencyList
-                .SelectMany(kvp => kvp.Value)
-                .ToList()
-        };
-
-        return JsonSerializer.Serialize(topology, new JsonSerializerOptions { WriteIndented = true });
+        return AdjacencyList.TryGetValue(nodeId, out var edges) ? edges : Enumerable.Empty<Edge>();
     }
 
-    public static LightningFastGraph DeserializeFromJson(string json)
+    public IEnumerable<Edge> GetIncomingEdges(string nodeId)
     {
-        var topology = JsonSerializer.Deserialize<Topology>(json);
-        if (topology == null)
-            throw new ArgumentException("Invalid JSON format.");
+        return ReverseAdjacencyList.TryGetValue(nodeId, out var edges) ? edges : Enumerable.Empty<Edge>();
+    }
 
-        var graph = new LightningFastGraph();
-        foreach (var edge in topology.Data)
-        {
-            graph.AddEdge(edge.From, edge.To, edge.Scid, edge.Weight.BaseMSat, edge.Weight.ProportionalMillionths);
-        }
+    public bool HasEdge(string from, string to)
+    {
+        return AdjacencyList.TryGetValue(from, out var edges) && 
+               edges.Any(e => e.To == to);
+    }
 
-        return graph;
+    // public string SerializeToJson(string graphName)
+    // {
+    //     var topology = new Topology
+    //     {
+    //         Metadata = new Metadata
+    //         {
+    //             CreatedAt = DateTime.UtcNow,
+    //             GraphName = graphName,
+    //             NumberOfNodes = NodeCount,
+    //             NumberOfEdges = EdgeCount
+    //         },
+    //         Data = _adjacencyList
+    //             .SelectMany(kvp => kvp.Value)
+    //             .ToList()
+    //     };
+    //
+    //     return JsonSerializer.Serialize(topology, new JsonSerializerOptions { WriteIndented = true });
+    // }
+
+    // public static LightningFastGraph DeserializeFromJson(string json)
+    // {
+    //     var topology = JsonSerializer.Deserialize<Topology>(json);
+    //     if (topology == null)
+    //         throw new ArgumentException("Invalid JSON format.");
+    //
+    //     var graph = new LightningFastGraph();
+    //     foreach (var edge in topology.Data)
+    //     {
+    //         graph.AddEdge(edge.From, edge.To, edge.Scid, edge.Weight.BaseMSat, edge.Weight.ProportionalMillionths);
+    //     }
+    //
+    //     return graph;
+    // }
+
+    public BridgeAnalysis GetBridgeAnalysis()
+    {
+        return BridgeDetector.Analyze(this);
+    }
+
+    public NetworkMetrics GetNetworkMetrics()
+    {
+        return NetworkAnalyzer.CalculateAll(this);
+    }
+
+    public double GetDensity()
+    {
+        return NetworkAnalyzer.CalculateDensity(this);
+    }
+    public int GetDiameter()
+    {
+        return NetworkAnalyzer.CalculateDiameter(this);
+    }
+    public double GetAverageDegree()
+    {
+        return NetworkAnalyzer.CalculateAverageDegree(this);
+    }
+    public double GetAverageLocalClusteringCoefficient()
+    {
+        return NetworkAnalyzer.CalculateAverageLocalClusteringCoefficient(this);
+    }
+    
+    public double GetGlobalClusteringCoefficient()
+    {
+        return NetworkAnalyzer.CalculateGlobalClusteringCoefficient(this);
+    }
+    
+    public double GetAveragePathLength()
+    {
+        return NetworkAnalyzer.CalculateAveragePathLength(this);
+    }
+
+    public CentralityMetrics GetCentralityMetricsAnalytically()
+    {
+        return CentralityAnalyzer.CalculateCentralityAnalytically(this);
+    }
+    
+    public CentralityMetrics GetCentralityMetricsEmpirically(int runs = 1_000, int? seed = null)
+    {
+        return CentralityAnalyzer.CalculateEmpiricalCentrality(this, runs, seed);
     }
 }

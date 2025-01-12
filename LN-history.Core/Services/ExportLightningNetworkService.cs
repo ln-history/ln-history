@@ -1,4 +1,5 @@
 using LightningGraph.Core;
+using LightningGraph.Serialization;
 using LN_history.Cache.Services;
 using LN_history.Core.Helper;
 using LN_history.Data.DataStores;
@@ -22,24 +23,25 @@ public class ExportLightningNetworkService : IExportLightningNetworkService
         _logger = logger;
     }
 
-
-    public async Task ExportLightningNetworkCompleteAsync(DateTime timestamp, LightningFastGraph lightningNetwork,
+    public async Task ExportLightningNetworkCompleteAsync(string bucketName, DateTime timestamp, LightningFastGraph lightningNetwork,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation($"Exporting all Information of Lightning Network at timestamp {timestamp}");
         
-        await ExportLightningNetworkTopologyByTimestampAsync(timestamp, lightningNetwork, cancellationToken);
-        await ExportLightningNodeInformationByTimestampAsync(timestamp, lightningNetwork._nodeInformationDict.Values.ToList(), cancellationToken);
-        await ExportLightningChannelInformationByTimestampAsync(timestamp,lightningNetwork._edgeInformationDict.Values.ToList(), cancellationToken);
+        await ExportLightningNetworkTopologyByTimestampAsync(bucketName, timestamp, lightningNetwork, cancellationToken);
+        // await ExportLightningNodeInformationByTimestampAsync(timestamp, lightningNetwork.NodeInformationDict.Values.ToList(), cancellationToken);
+        // await ExportLightningChannelInformationByTimestampAsync(timestamp,lightningNetwork.EdgeInformationDict.Values.ToList(), cancellationToken);
     }
 
-    public async Task ExportLightningNetworkTopologyByTimestampAsync(DateTime timestamp, LightningFastGraph lightningNetwork, CancellationToken cancellationToken)
+    public async Task ExportLightningNetworkTopologyByTimestampAsync(string bucketName, DateTime timestamp, LightningFastGraph lightningNetwork, CancellationToken cancellationToken)
     {
-        var objectName = HelperFunctions.GetFileNameByTimestamp(timestamp, "json");
+        var objectName = HelperFunctions.GetFileNameByTimestamp(timestamp, "bin");
+        
+        _logger.LogInformation($"Serializing the topology of Lightning Network at timestamp {timestamp}");
+        var serializedLightningNetwork = LightningFastGraphTopologySerializerService.SerializeTopology(lightningNetwork);
         
         _logger.LogInformation($"Exporting the topology of Lightning Network at timestamp {timestamp}");
-        
-        await _cacheService.StoreGraphAsync("lightning-fast-graphs", objectName, lightningNetwork, cancellationToken);    
+        await _cacheService.StoreGraphTopologyUsingRpcAsync(serializedLightningNetwork, bucketName, objectName, cancellationToken);    
     }
 
     public async Task ExportLightningNodeInformationByTimestampAsync(DateTime timestamp, IEnumerable<NodeInformation> nodes,

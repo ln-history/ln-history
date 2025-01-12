@@ -5,20 +5,21 @@ namespace LightningGraph.GraphAlgorithms.Metrics;
 
 public static class NetworkAnalyzer
 {
-    public static NetworkMetrics Calculate(LightningFastGraph graph)
+    public static NetworkMetrics CalculateAll(LightningFastGraph graph)
     {
         return new NetworkMetrics
         {
             Diameter = CalculateDiameter(graph),
             AveragePathLength = CalculateAveragePathLength(graph),
             AverageDegree = CalculateAverageDegree(graph),
-            ClusteringCoefficient = CalculateClusteringCoefficient(graph),
+            AverageLocalClusteringCoefficient = CalculateAverageLocalClusteringCoefficient(graph),
+            GlobalClusteringCoefficient = CalculateGlobalClusteringCoefficient(graph),
             Density = CalculateDensity(graph),
             NodeIdsSortedByHighestDegreeTop100 = GetTopNodesByDegree(graph, 100)
         };
     }
 
-    private static int CalculateDiameter(LightningFastGraph graph)
+    public static int CalculateDiameter(LightningFastGraph graph)
     {
         double maxDistance = 0;
 
@@ -27,14 +28,17 @@ public static class NetworkAnalyzer
             var currentDistances = DijkstraShortestPaths(graph, node);
             foreach (var dist in currentDistances.Values)
             {
-                maxDistance = Math.Max(maxDistance, dist);
+                if (dist < double.MaxValue)
+                {
+                    maxDistance = Math.Max(maxDistance, dist);
+                }
             }
         }
 
         return (int)maxDistance;
     }
 
-    private static double CalculateAveragePathLength(LightningFastGraph graph)
+    public static double CalculateAveragePathLength(LightningFastGraph graph)
     {
         double totalDistance = 0;
         long pathCount = 0;
@@ -49,7 +53,7 @@ public static class NetworkAnalyzer
         return pathCount == 0 ? 0 : totalDistance / pathCount;
     }
 
-    private static Dictionary<string, double> DijkstraShortestPaths(LightningFastGraph graph, string source)
+    public static Dictionary<string, double> DijkstraShortestPaths(LightningFastGraph graph, string source)
     {
         var distances = new Dictionary<string, double>();
         var priorityQueue = new PriorityQueue<string, double>();
@@ -84,12 +88,12 @@ public static class NetworkAnalyzer
         return distances;
     }
 
-    private static double CalculateAverageDegree(LightningFastGraph graph)
+    public static double CalculateAverageDegree(LightningFastGraph graph)
     {
         return graph.NodeCount == 0 ? 0 : (double)graph.EdgeCount * 2 / graph.NodeCount;
     }
 
-    private static double CalculateClusteringCoefficient(LightningFastGraph graph)
+    public static double CalculateAverageLocalClusteringCoefficient(LightningFastGraph graph)
     {
         double totalCoefficient = 0;
 
@@ -115,14 +119,42 @@ public static class NetworkAnalyzer
 
         return graph.NodeCount == 0 ? 0 : totalCoefficient / graph.NodeCount;
     }
+    
+    public static double CalculateGlobalClusteringCoefficient(LightningFastGraph graph)
+    {
+        double closedTriplets = 0;
+        double totalTriplets = 0;
 
-    private static double CalculateDensity(LightningFastGraph graph)
+        foreach (var node in graph.GetNodes())
+        {
+            var (neighbors, _) = graph.GetNeighbors(node);
+            int degree = neighbors.Length;
+
+            // Count triplets involving this node
+            totalTriplets += degree * (degree - 1) / 2;
+
+            // Count closed triplets (triangles)
+            for (int i = 0; i < neighbors.Length; i++)
+            {
+                for (int j = i + 1; j < neighbors.Length; j++)
+                {
+                    var (subNeighbors, _) = graph.GetNeighbors(neighbors[i]);
+                    if (subNeighbors.Contains(neighbors[j]))
+                        closedTriplets++;
+                }
+            }
+        }
+
+        return totalTriplets == 0 ? 0 : closedTriplets / totalTriplets;
+    }
+
+    public static double CalculateDensity(LightningFastGraph graph)
     {
         int n = graph.NodeCount;
         return n == 0 ? 0 : (2.0 * graph.EdgeCount) / (n * (n - 1));
     }
 
-    private static string[] GetTopNodesByDegree(LightningFastGraph graph, int count)
+    public static string[] GetTopNodesByDegree(LightningFastGraph graph, int count)
     {
         return graph.GetNodes()
             .Select(node => new { Node = node, Degree = graph.GetDegree(node) })

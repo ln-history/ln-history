@@ -2,9 +2,11 @@
 using LightningGraph.Core;
 using LightningGraph.Model;
 using LN_history.Core.Helper;
+using LN_history.Core.Settings;
 using LN_history.Data.DataStores;
 using LN_history.Data.Model;
 using LN_History.Model.Settings;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -19,12 +21,14 @@ public class LightningNetworkService : ILightningNetworkService
     private readonly IImportLightningNetworkService _importLightningNetworkService;
     private readonly IExportLightningNetworkService _exportLightningNetworkService;
     private readonly LightningSettings _settings;
+    private readonly LightningNetworkServiceOptions _options;
     
-    public LightningNetworkService(IMapper mapper, INodeAnnouncementDataStore nodeAnnouncementDataStore, ILightningNetworkDataStore lightningNetworkDataStore, ILogger<ILightningNetworkService> logger, IExportLightningNetworkService exportLightningNetworkService, IImportLightningNetworkService importLightningNetworkService, IOptions<LightningSettings> options)
+    public LightningNetworkService(IMapper mapper, INodeAnnouncementDataStore nodeAnnouncementDataStore, ILightningNetworkDataStore lightningNetworkDataStore, ILogger<ILightningNetworkService> logger, IExportLightningNetworkService exportLightningNetworkService, IImportLightningNetworkService importLightningNetworkService, IOptions<LightningSettings> options, IOptions<LightningNetworkServiceOptions> serviceOptions)
     {
         _mapper = mapper;
         _logger = logger;
         _importLightningNetworkService = importLightningNetworkService;
+        _options = serviceOptions.Value;
         _settings = options.Value;
         _exportLightningNetworkService = exportLightningNetworkService;
         _nodeAnnouncementDataStore = nodeAnnouncementDataStore;
@@ -33,13 +37,14 @@ public class LightningNetworkService : ILightningNetworkService
 
     public async Task<LightningFastGraph> GetLightningNetworkAsync(DateTime timestamp, int paymentSizeSat, CancellationToken cancellationToken = default)
     {
-        var lightningNetwork = await _importLightningNetworkService.ImportLightningNetworkByTimestamp(timestamp, cancellationToken);
+        var bucketName = _options.BucketName;
+        var lightningNetwork = await _importLightningNetworkService.ImportLightningNetworkByTimestamp(bucketName, timestamp, cancellationToken);
 
         if (lightningNetwork == null)
         {
             _logger.LogInformation($"No topology of Lightning Network at timestamp {timestamp} found");
             lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, TimeSpan.FromDays(_settings.DefaultTimespanDays), paymentSizeSat, cancellationToken);
-            await _exportLightningNetworkService.ExportLightningNetworkCompleteAsync(timestamp, lightningNetwork, cancellationToken);
+            await _exportLightningNetworkService.ExportLightningNetworkCompleteAsync(bucketName, timestamp, lightningNetwork, cancellationToken);
         }
         else
         {
@@ -71,52 +76,6 @@ public class LightningNetworkService : ILightningNetworkService
 
         return result;
     }
-
-    public async Task<int> GetDiameterByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
-    {
-        return (await GetNetworkMetricsByTimestampAsync(timestamp, cancellationToken)).Diameter;
-    }
-    
-    public async Task<double> GetAveragePathLengthByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
-    {
-        return (await GetNetworkMetricsByTimestampAsync(timestamp, cancellationToken)).AveragePathLength;
-    }
-    
-    public async Task<double> GetAverageDegreeByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
-    {
-        return (await GetNetworkMetricsByTimestampAsync(timestamp, cancellationToken)).AverageDegree;
-    }
-    
-    public async Task<double> GetGlobalClusteringCoefficientByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
-    {
-        return (await GetNetworkMetricsByTimestampAsync(timestamp, cancellationToken)).ClusteringCoefficient;
-    }
-    
-    public async Task<double> GetDensityByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
-    {
-        return (await GetNetworkMetricsByTimestampAsync(timestamp, cancellationToken)).Density;
-    }
-    
-    private async Task<NetworkMetrics> GetNetworkMetricsByTimestampAsync(
-        DateTime timestamp, 
-        CancellationToken cancellationToken)
-    {
-        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(
-            timestamp, 
-            TimeSpan.FromDays(_settings.DefaultTimespanDays), 
-            _settings.DefaultPaymentSizeSats,
-            cancellationToken);
-
-        _logger.LogInformation($"Start analysis for NetworkMetrics at timestamp {timestamp}");
-        
-        // var analysis = lightningNetwork.AnalyzeNetwork();
-        
-        _logger.LogInformation($"Finish analysis for NetworkMetrics at timestamp {timestamp}");
-        
-        // return analysis;
-        
-        return new NetworkMetrics();
-    }
     
     public async Task<int> GetNumberOfBridgesByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
     {
@@ -126,11 +85,9 @@ public class LightningNetworkService : ILightningNetworkService
             _settings.DefaultPaymentSizeSats,
             cancellationToken);
 
-        // var bridgeAnalysis = lightningNetwork.AnalyzeBridges();
+        var bridgeAnalysis = lightningNetwork.GetBridgeAnalysis();
         
-        // return bridgeAnalysis.BridgeCount;
-
-        return 1;
+        return bridgeAnalysis.BridgeCount;
     }
 
     public async Task<LightningFastGraph> ConstructLightningFastGraphByTimestampAsync(DateTime timestamp,
@@ -175,14 +132,15 @@ public class LightningNetworkService : ILightningNetworkService
 
     public async Task ExportLightningNetworkByTimestampAsync(DateTime timestamp, int paymentSizeSat, CancellationToken cancellationToken)
     {
+        var bucketName = _options.BucketName;
         var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, TimeSpan.FromDays(_settings.DefaultTimespanDays), paymentSizeSat, cancellationToken);
         
-        await _exportLightningNetworkService.ExportLightningNetworkTopologyByTimestampAsync(timestamp, lightningNetwork, cancellationToken);
+        await _exportLightningNetworkService.ExportLightningNetworkTopologyByTimestampAsync(bucketName, timestamp, lightningNetwork, cancellationToken);
     }
 
     public async Task ExportLightningNodeInformationAsync(DateTime timestamp, LightningFastGraph lightningNetwork, CancellationToken cancellationToken)
     {
-        var nodeInformation = lightningNetwork._nodeInformationDict.Values.ToList();
+        var nodeInformation = lightningNetwork.NodeInformationDict.Values.ToList();
 
         await _exportLightningNetworkService.ExportLightningNodeInformationByTimestampAsync(timestamp, nodeInformation, cancellationToken);
     }
@@ -190,30 +148,30 @@ public class LightningNetworkService : ILightningNetworkService
     public async Task ExportLightningChannelInformationAsync(DateTime timestamp, LightningFastGraph lightningNetwork,
         CancellationToken cancellationToken)
     {
-        var channelInformation = lightningNetwork._edgeInformationDict.Values.ToList();
+        var channelInformation = lightningNetwork.EdgeInformationDict.Values.ToList();
         
         await _exportLightningNetworkService.ExportLightningChannelInformationByTimestampAsync(timestamp, channelInformation, cancellationToken);
     }
 
     public async Task<double> GetCentralityAnalyticallyByTimestampAsync(DateTime timestamp, int paymentSizeSat, CancellationToken cancellationToken)
     {
-        // var lightningNetwork = await GetLightningNetworkAsync(timestamp, cancellationToken, paymentSizeSat);
-
-        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, TimeSpan.FromDays(_settings.DefaultTimespanDays), paymentSizeSat, cancellationToken);
+        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(
+            timestamp, 
+            TimeSpan.FromDays(_settings.DefaultTimespanDays), 
+            paymentSizeSat,
+            cancellationToken);
         
-        // return lightningNetwork.AnalyzeCentrality().AverageCentrality;
-
-        return 1.1;
+        return lightningNetwork.GetCentralityMetricsAnalytically().AverageCentrality;
     }
 
     public async Task<double> GetCentralityEmpiricallyByTimestampAsync(DateTime timestamp, int paymentSizeSat, CancellationToken cancellationToken)
     {
-        // var lightningNetwork = await GetLightningNetworkAsync(timestamp, cancellationToken, paymentSizeSat);
-
-        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(timestamp, TimeSpan.FromDays(_settings.DefaultTimespanDays), paymentSizeSat, cancellationToken);
+        var lightningNetwork = await ConstructLightningFastGraphByTimestampAsync(
+            timestamp, 
+            TimeSpan.FromDays(_settings.DefaultTimespanDays), 
+            paymentSizeSat,
+            cancellationToken);
         
-        // return lightningNetwork.AnalyzeCentralityMonteCarlo().AverageCentrality;
-
-        return 1.1;
+        return lightningNetwork.GetCentralityMetricsEmpirically().AverageCentrality;
     }
 }

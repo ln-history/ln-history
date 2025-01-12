@@ -10,13 +10,6 @@ public interface ILightningNetworkService
     
     Task<int> GetEdgeCountByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken);
 
-    Task<int> GetDiameterByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken);
-    Task<double> GetAveragePathLengthByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken);
-
-    Task<double> GetAverageDegreeByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken);
-    Task<double> GetGlobalClusteringCoefficientByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken);
-    Task<double> GetDensityByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken);
-
     Task<int> GetNumberOfBridgesByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken);
 
     Task<LightningFastGraph> ConstructLightningFastGraphByTimestampAsync(DateTime timestamp,

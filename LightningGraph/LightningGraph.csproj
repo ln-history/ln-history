@@ -16,13 +16,15 @@
       <PackageReference Include="Google.Protobuf" Version="3.29.1" />
       <PackageReference Include="Grpc.Tools" Version="2.68.1">
         <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="MessagePack" Version="3.1.0" />
     </ItemGroup>
 
     <ItemGroup>
-        <Protobuf Include="Serialization/Protobuf/fast_lightning_graph.proto" />
+        <Protobuf Include="Serialization/Protobuf/lightning_fast_graph_topology.proto"
+                  GrpcServices="None"
+                  OutputDir="$(ProjectDir)"
+                  CompileOutputs="true" />
     </ItemGroup>
 
     <ItemGroup>
