@@ -24,7 +24,7 @@ public static class BridgeDetector
         LightningFastGraph graph,
         List<(string From, string To)> bridges)
     {
-        var nodes = graph.GetNodes().ToHashSet();
+        var nodes = graph.GetVertices().ToHashSet();
         var validEdges = new HashSet<(string, string)>();
         
         foreach (var node in nodes)
@@ -77,60 +77,43 @@ public static class BridgeDetector
     {
         var visited = new HashSet<string>();
         var discoveryTime = new Dictionary<string, int>();
-        var lowTime = new Dictionary<string, int>();
+        var low = new Dictionary<string, int>();
+        var parent = new Dictionary<string, string>();
         var bridges = new List<(string, string)>();
-        var time = 0;
+        int time = 0;
 
-        foreach (var node in graph.GetNodes())
+        void Dfs(string node)
         {
-            if (!visited.Contains(node))
+            visited.Add(node);
+            discoveryTime[node] = low[node] = ++time;
+
+            foreach (var neighbor in graph.GetNeighbors(node).Neighbors)
             {
-                DFSBridge(graph, node, null, visited, discoveryTime, lowTime, 
-                         ref time, bridges);
+                if (!visited.Contains(neighbor))
+                {
+                    parent[neighbor] = node;
+                    Dfs(neighbor);
+
+                    low[node] = Math.Min(low[node], low[neighbor]);
+
+                    if (low[neighbor] > discoveryTime[node])
+                    {
+                        bridges.Add((node, neighbor));
+                    }
+                }
+                else if (neighbor != parent.GetValueOrDefault(node))
+                {
+                    low[node] = Math.Min(low[node], discoveryTime[neighbor]);
+                }
             }
+        }
+
+        foreach (var node in graph.GetVertices())
+        {
+            if (!visited.Contains(node)) Dfs(node);
         }
 
         return bridges;
-    }
-
-    // ReSharper disable once InconsistentNaming
-    private static void DFSBridge(
-        LightningFastGraph graph,
-        string current,
-        string parent,
-        HashSet<string> visited,
-        Dictionary<string, int> discoveryTime,
-        Dictionary<string, int> lowTime,
-        ref int time,
-        List<(string, string)> bridges)
-    {
-        visited.Add(current);
-        discoveryTime[current] = lowTime[current] = ++time;
-
-        foreach (var edge in graph.GetOutgoingEdges(current))
-        {
-            var neighbor = edge.To;
-            
-            if (neighbor == parent) continue;
-
-            if (!visited.Contains(neighbor))
-            {
-                DFSBridge(graph, neighbor, current, visited, discoveryTime, 
-                         lowTime, ref time, bridges);
-
-                lowTime[current] = Math.Min(lowTime[current], lowTime[neighbor]);
-
-                if (lowTime[neighbor] > discoveryTime[current])
-                {
-                    bridges.Add((current, neighbor));
-                }
-            }
-            else
-            {
-                lowTime[current] = Math.Min(lowTime[current], 
-                                          discoveryTime[neighbor]);
-            }
-        }
     }
 
     private static double CalculateCriticality(

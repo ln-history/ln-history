@@ -8,140 +8,157 @@ namespace LightningGraph.Core;
 
 public class LightningFastGraph
 {
-    public Dictionary<string, List<Edge>> AdjacencyList = new();
-    public Dictionary<string, List<Edge>> ReverseAdjacencyList = new();
-    private int _edgeCount = 0;
+    private readonly Dictionary<string, HashSet<string>> _outgoingEdges;
+    private readonly Dictionary<string, HashSet<string>> _incomingEdges;
+
+    private readonly Dictionary<(string From, string To), Edge> _edges;
+    private readonly HashSet<string> _nodes;
 
     public readonly Dictionary<string, NodeInformation> NodeInformationDict = new();
     public readonly Dictionary<string, ChannelInformation> EdgeInformationDict = new();
     
-    public int NodeCount => AdjacencyList.Count;
+    public int NodeCount { get; private set; } = 0;
 
-    public int EdgeCount => _edgeCount;
-
-    private void AddEdge(string from, string to, string scid, long baseWeight, long proportionalWeight)
+    public int EdgeCount { get; private set; } = 0;
+    
+    public LightningFastGraph(int initialNodeCapacity = 15000, int initialEdgeCapacity = 70000)
     {
-        var edge = new Edge
-        {
-            Scid = scid,
-            From = from,
-            To = to,
-            BaseMSat = baseWeight,
-            ProportionalMillionths = proportionalWeight
-        };
+        _outgoingEdges = new Dictionary<string, HashSet<string>>(initialNodeCapacity);
+        _incomingEdges = new Dictionary<string, HashSet<string>>(initialNodeCapacity);
+        _edges = new Dictionary<(string From, string To), Edge>(initialEdgeCapacity);
+        _nodes = new HashSet<string>(initialNodeCapacity);
+    }
+    
+    public void AddVertex(string nodeId)
+    {
+        if (!_nodes.Add(nodeId)) return;
+        _outgoingEdges[nodeId] = new HashSet<string>();
+        _incomingEdges[nodeId] = new HashSet<string>();
 
-        if (!AdjacencyList.ContainsKey(from))
-        {
-            AdjacencyList[from] = new List<Edge>();
-        }
-        if (!ReverseAdjacencyList.ContainsKey(to))
-        {
-            ReverseAdjacencyList[to] = new List<Edge>();
-        }
-
-        AdjacencyList[from].Add(edge);
-        ReverseAdjacencyList[to].Add(edge);
-        _edgeCount++;
+        NodeCount++;
     }
 
-    // Method to add a batch of nodes
-    public void AddVerticesBatch(IEnumerable<NodeInformation> validNodes)
+    public void AddEdge(Edge edge)
     {
-        foreach (var nodeInfo in validNodes)
+        AddVertex(edge.From);
+        AddVertex(edge.To);
+        
+        _outgoingEdges[edge.From].Add(edge.To);
+        _incomingEdges[edge.To].Add(edge.From);
+        _edges[(edge.From, edge.To)] = edge;
+        
+        EdgeCount++;
+    }
+    
+    public void AddVerticesBatch(IEnumerable<string> vertices)
+    {
+        foreach (var vertex in vertices)
         {
-            // Store node information in the dictionary
-            NodeInformationDict[nodeInfo.NodeId] = new NodeInformation()
+            if (_nodes.Add(vertex))
             {
-                NodeId = nodeInfo.NodeId,
-                Features = nodeInfo.Features,
-                Timestamp = nodeInfo.Timestamp,
-                RgbColor = nodeInfo.RgbColor,
-                Addresses = nodeInfo.Addresses
-            };
+                _outgoingEdges[vertex] = new HashSet<string>();
+                _incomingEdges[vertex] = new HashSet<string>();
+                NodeCount++;
+            }
+        }
+    }
+    
+    public void AddEdgesBatch(IEnumerable<Edge> edges)
+    {
+        foreach (var edge in edges)
+        {
+            // Add nodes if they do not already exist
+            AddVertex(edge.From);
+            AddVertex(edge.To);
 
-            // Ensure the node exists in the adjacency list
-            if (!AdjacencyList.ContainsKey(nodeInfo.NodeId))
+            // Add the edge
+            if (!_edges.ContainsKey((edge.From, edge.To)))
             {
-                AdjacencyList[nodeInfo.NodeId] = new List<Edge>();
+                _outgoingEdges[edge.From].Add(edge.To);
+                _incomingEdges[edge.To].Add(edge.From);
+                _edges[(edge.From, edge.To)] = edge;
+
+                EdgeCount++;
             }
         }
     }
 
-    // Method to add a batch of edges
-    public void AddEdgesBatch(IEnumerable<ChannelInformation> validChannels)
+    public IEnumerable<Edge> GetEdges()
     {
-        foreach (var channelInfo in validChannels)
-        {
-            // Assuming 'Cost' is calculated and provided in channelInfo
-            var baseWeight = (int)(channelInfo.FeeBaseMSat);
-            var proportionalWeight = (int)(channelInfo.FeeProportionalMillionths);
-
-            // Add the edge to the graph
-            AddEdge(channelInfo.NodeId1, channelInfo.NodeId2, channelInfo.Scid, baseWeight, proportionalWeight);
-
-            // Store edge information in the dictionary
-            EdgeInformationDict[channelInfo.Scid] = new ChannelInformation()
-            {
-                Scid = channelInfo.Scid,
-                Features = channelInfo.Features,
-                NodeId1 = channelInfo.NodeId1,
-                NodeId2 = channelInfo.NodeId2,
-                Timestamp = channelInfo.Timestamp,
-                MessageFlags = channelInfo.MessageFlags,
-                ChannelFlags = channelInfo.ChannelFlags,
-                CltvExpiryDelta = channelInfo.CltvExpiryDelta,
-                HtlcMinimumMSat = channelInfo.HtlcMinimumMSat,
-                FeeBaseMSat = channelInfo.FeeBaseMSat,
-                FeeProportionalMillionths = channelInfo.FeeProportionalMillionths,
-                HtlcMaximumMSat = channelInfo.HtlcMaximumMSat,
-                ChainHash = channelInfo.ChainHash
-            };
-        }
-    }
-
-    public IEnumerable<string> GetNodes()
-    {
-        return AdjacencyList.Keys;
-    }
-
-    public (string[] Neighbors, long[] Weights) GetNeighbors(string nodeId)
-    {
-        if (!AdjacencyList.TryGetValue(nodeId, out var edges)) return (Array.Empty<string>(), Array.Empty<long>());
-        return (
-            edges.Select(e => e.To).ToArray(),
-            edges.Select(e => e.BaseMSat + e.ProportionalMillionths).ToArray()
-        );
-    }
-
-    public int GetDegree(string nodeId)
-    {
-        return AdjacencyList.ContainsKey(nodeId) ? AdjacencyList[nodeId].Count : 0;
-    }
-
-    public int GetInDegree(string nodeId)
-    {
-        return ReverseAdjacencyList.ContainsKey(nodeId) ? ReverseAdjacencyList[nodeId].Count : 0;
-    }
-
-    public int GetOutDegree(string nodeId)
-    {
-        return GetDegree(nodeId);
+        return _edges.Values;
     }
     
-    public IEnumerable<Edge> GetOutgoingEdges(string nodeId)
+    public Dictionary<(string, string), Edge> GetEdgesDictionary()
     {
-        return AdjacencyList.TryGetValue(nodeId, out var edges) ? edges : Enumerable.Empty<Edge>();
+        return _edges;
+    }
+
+    public IEnumerable<string> GetVertices()
+    {
+        return _nodes.ToList();
     }
 
     public IEnumerable<Edge> GetIncomingEdges(string nodeId)
     {
-        return ReverseAdjacencyList.TryGetValue(nodeId, out var edges) ? edges : Enumerable.Empty<Edge>();
+        if (!_incomingEdges.ContainsKey(nodeId))
+            yield break;
+
+        foreach (var fromNode in _incomingEdges[nodeId])
+        {
+            if (_edges.TryGetValue((fromNode, nodeId), out var edge))
+            {
+                yield return edge;
+            }
+        }
+    }
+
+    public IEnumerable<Edge> GetOutgoingEdges(string nodeId)
+    {
+        if (!_outgoingEdges.ContainsKey(nodeId))
+            yield break;
+
+        foreach (var toNode in _outgoingEdges[nodeId])
+        {
+            if (_edges.TryGetValue((nodeId, toNode), out var edge))
+            {
+                yield return edge;
+            }
+        }
+    }
+
+    public int GetOutDegree(string nodeId)
+    {
+        return _outgoingEdges.TryGetValue(nodeId, out var outgoing) ? outgoing.Count : 0;
+    }
+
+    public int GetInDegree(string nodeId)
+    {
+        return _incomingEdges.TryGetValue(nodeId, out var incoming) ? incoming.Count : 0;
     }
 
     public bool HasEdge(string from, string to)
     {
-        return AdjacencyList.TryGetValue(from, out var edges) && 
-               edges.Any(e => e.To == to);
+        return _edges.ContainsKey((from, to));
+    }
+
+    public (string[] Neighbors, Weight[] Weights) GetNeighbors(string nodeId)
+    {
+        if (!_outgoingEdges.TryGetValue(nodeId, out var neighbors))
+            return (Array.Empty<string>(), Array.Empty<Weight>());
+
+        var neighborList = new List<string>();
+        var weightList = new List<Weight>();
+
+        foreach (var neighbor in neighbors)
+        {
+            if (_edges.TryGetValue((nodeId, neighbor), out var edge))
+            {
+                neighborList.Add(neighbor);
+                weightList.Add(edge.Weight);
+            }
+        }
+
+        return (neighborList.ToArray(), weightList.ToArray());
     }
 
     // public string SerializeToJson(string graphName)
@@ -198,7 +215,7 @@ public class LightningFastGraph
     }
     public double GetAverageDegree()
     {
-        return NetworkAnalyzer.CalculateAverageDegree(this);
+        return NetworkAnalyzer.CalculateAverageOutDegree(this);
     }
     public double GetAverageLocalClusteringCoefficient()
     {
@@ -220,8 +237,8 @@ public class LightningFastGraph
         return CentralityAnalyzer.CalculateCentralityAnalytically(this);
     }
     
-    public CentralityMetrics GetCentralityMetricsEmpirically(int runs = 1_000, int? seed = null)
+    public CentralityMetrics GetCentralityMetricsEmpirically(int? paymentSizeSats, int runs = 1_000, int? seed = null)
     {
-        return CentralityAnalyzer.CalculateEmpiricalCentrality(this, runs, seed);
+        return CentralityAnalyzer.CalculateEmpiricalCentrality(this, runs, paymentSizeSats, seed);
     }
 }

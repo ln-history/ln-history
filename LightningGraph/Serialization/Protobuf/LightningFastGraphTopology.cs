@@ -25,23 +25,18 @@ namespace LightningGraph.Serialization {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "CjpTZXJpYWxpemF0aW9uL1Byb3RvYnVmL2xpZ2h0bmluZ19mYXN0X2dyYXBo",
-            "X3RvcG9sb2d5LnByb3RvIo4CCghUb3BvbG9neRI0Cg5hZGphY2VuY3lfbGlz",
-            "dBgBIAMoCzIcLlRvcG9sb2d5LkFkamFjZW5jeUxpc3RFbnRyeRJDChZyZXZl",
-            "cnNlX2FkamFjZW5jeV9saXN0GAIgAygLMiMuVG9wb2xvZ3kuUmV2ZXJzZUFk",
-            "amFjZW5jeUxpc3RFbnRyeRo/ChJBZGphY2VuY3lMaXN0RW50cnkSCwoDa2V5",
-            "GAEgASgJEhgKBXZhbHVlGAIgASgLMgkuRWRnZUxpc3Q6AjgBGkYKGVJldmVy",
-            "c2VBZGphY2VuY3lMaXN0RW50cnkSCwoDa2V5GAEgASgJEhgKBXZhbHVlGAIg",
-            "ASgLMgkuRWRnZUxpc3Q6AjgBIiAKCEVkZ2VMaXN0EhQKBWVkZ2VzGAEgAygL",
-            "MgUuRWRnZSJjCgRFZGdlEgwKBHNjaWQYASABKAkSDAoEZnJvbRgCIAEoCRIK",
-            "CgJ0bxgDIAEoCRISCgpiYXNlX21fc2F0GAQgASgDEh8KF3Byb3BvcnRpb25h",
-            "bF9taWxsaW9udGhzGAUgASgDQh+qAhxMaWdodG5pbmdHcmFwaC5TZXJpYWxp",
-            "emF0aW9uYgZwcm90bzM="));
+            "X3RvcG9sb2d5LnByb3RvIj0KBldlaWdodBISCgpiYXNlX21fc2F0GAEgASgD",
+            "Eh8KF3Byb3BvcnRpb25hbF9taWxsaW9udGhzGAIgASgDIkcKBEVkZ2USDAoE",
+            "c2NpZBgBIAEoCRIMCgRmcm9tGAIgASgJEgoKAnRvGAMgASgJEhcKBndlaWdo",
+            "dBgEIAEoCzIHLldlaWdodCIlCg1HcmFwaFRvcG9sb2d5EhQKBWVkZ2VzGAEg",
+            "AygLMgUuRWRnZUIfqgIcTGlnaHRuaW5nR3JhcGguU2VyaWFsaXphdGlvbmIG",
+            "cHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.Topology), global::LightningGraph.Serialization.Topology.Parser, new[]{ "AdjacencyList", "ReverseAdjacencyList" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, }),
-            new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.EdgeList), global::LightningGraph.Serialization.EdgeList.Parser, new[]{ "Edges" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.Edge), global::LightningGraph.Serialization.Edge.Parser, new[]{ "Scid", "From", "To", "BaseMSat", "ProportionalMillionths" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.Weight), global::LightningGraph.Serialization.Weight.Parser, new[]{ "BaseMSat", "ProportionalMillionths" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.Edge), global::LightningGraph.Serialization.Edge.Parser, new[]{ "Scid", "From", "To", "Weight" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.GraphTopology), global::LightningGraph.Serialization.GraphTopology.Parser, new[]{ "Edges" }, null, null, null, null)
           }));
     }
     #endregion
@@ -49,16 +44,16 @@ namespace LightningGraph.Serialization {
   }
   #region Messages
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class Topology : pb::IMessage<Topology>
+  public sealed partial class Weight : pb::IMessage<Weight>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<Topology> _parser = new pb::MessageParser<Topology>(() => new Topology());
+    private static readonly pb::MessageParser<Weight> _parser = new pb::MessageParser<Weight>(() => new Weight());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<Topology> Parser { get { return _parser; } }
+    public static pb::MessageParser<Weight> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -74,7 +69,7 @@ namespace LightningGraph.Serialization {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Topology() {
+    public Weight() {
       OnConstruction();
     }
 
@@ -82,57 +77,59 @@ namespace LightningGraph.Serialization {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Topology(Topology other) : this() {
-      adjacencyList_ = other.adjacencyList_.Clone();
-      reverseAdjacencyList_ = other.reverseAdjacencyList_.Clone();
+    public Weight(Weight other) : this() {
+      baseMSat_ = other.baseMSat_;
+      proportionalMillionths_ = other.proportionalMillionths_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Topology Clone() {
-      return new Topology(this);
+    public Weight Clone() {
+      return new Weight(this);
     }
 
-    /// <summary>Field number for the "adjacency_list" field.</summary>
-    public const int AdjacencyListFieldNumber = 1;
-    private static readonly pbc::MapField<string, global::LightningGraph.Serialization.EdgeList>.Codec _map_adjacencyList_codec
-        = new pbc::MapField<string, global::LightningGraph.Serialization.EdgeList>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForMessage(18, global::LightningGraph.Serialization.EdgeList.Parser), 10);
-    private readonly pbc::MapField<string, global::LightningGraph.Serialization.EdgeList> adjacencyList_ = new pbc::MapField<string, global::LightningGraph.Serialization.EdgeList>();
+    /// <summary>Field number for the "base_m_sat" field.</summary>
+    public const int BaseMSatFieldNumber = 1;
+    private long baseMSat_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::MapField<string, global::LightningGraph.Serialization.EdgeList> AdjacencyList {
-      get { return adjacencyList_; }
+    public long BaseMSat {
+      get { return baseMSat_; }
+      set {
+        baseMSat_ = value;
+      }
     }
 
-    /// <summary>Field number for the "reverse_adjacency_list" field.</summary>
-    public const int ReverseAdjacencyListFieldNumber = 2;
-    private static readonly pbc::MapField<string, global::LightningGraph.Serialization.EdgeList>.Codec _map_reverseAdjacencyList_codec
-        = new pbc::MapField<string, global::LightningGraph.Serialization.EdgeList>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForMessage(18, global::LightningGraph.Serialization.EdgeList.Parser), 18);
-    private readonly pbc::MapField<string, global::LightningGraph.Serialization.EdgeList> reverseAdjacencyList_ = new pbc::MapField<string, global::LightningGraph.Serialization.EdgeList>();
+    /// <summary>Field number for the "proportional_millionths" field.</summary>
+    public const int ProportionalMillionthsFieldNumber = 2;
+    private long proportionalMillionths_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::MapField<string, global::LightningGraph.Serialization.EdgeList> ReverseAdjacencyList {
-      get { return reverseAdjacencyList_; }
+    public long ProportionalMillionths {
+      get { return proportionalMillionths_; }
+      set {
+        proportionalMillionths_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as Topology);
+      return Equals(other as Weight);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(Topology other) {
+    public bool Equals(Weight other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (!AdjacencyList.Equals(other.AdjacencyList)) return false;
-      if (!ReverseAdjacencyList.Equals(other.ReverseAdjacencyList)) return false;
+      if (BaseMSat != other.BaseMSat) return false;
+      if (ProportionalMillionths != other.ProportionalMillionths) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -140,8 +137,8 @@ namespace LightningGraph.Serialization {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      hash ^= AdjacencyList.GetHashCode();
-      hash ^= ReverseAdjacencyList.GetHashCode();
+      if (BaseMSat != 0L) hash ^= BaseMSat.GetHashCode();
+      if (ProportionalMillionths != 0L) hash ^= ProportionalMillionths.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -160,8 +157,14 @@ namespace LightningGraph.Serialization {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      adjacencyList_.WriteTo(output, _map_adjacencyList_codec);
-      reverseAdjacencyList_.WriteTo(output, _map_reverseAdjacencyList_codec);
+      if (BaseMSat != 0L) {
+        output.WriteRawTag(8);
+        output.WriteInt64(BaseMSat);
+      }
+      if (ProportionalMillionths != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(ProportionalMillionths);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -172,8 +175,14 @@ namespace LightningGraph.Serialization {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      adjacencyList_.WriteTo(ref output, _map_adjacencyList_codec);
-      reverseAdjacencyList_.WriteTo(ref output, _map_reverseAdjacencyList_codec);
+      if (BaseMSat != 0L) {
+        output.WriteRawTag(8);
+        output.WriteInt64(BaseMSat);
+      }
+      if (ProportionalMillionths != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(ProportionalMillionths);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -184,8 +193,12 @@ namespace LightningGraph.Serialization {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      size += adjacencyList_.CalculateSize(_map_adjacencyList_codec);
-      size += reverseAdjacencyList_.CalculateSize(_map_reverseAdjacencyList_codec);
+      if (BaseMSat != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(BaseMSat);
+      }
+      if (ProportionalMillionths != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ProportionalMillionths);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -194,12 +207,312 @@ namespace LightningGraph.Serialization {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(Topology other) {
+    public void MergeFrom(Weight other) {
       if (other == null) {
         return;
       }
-      adjacencyList_.MergeFrom(other.adjacencyList_);
-      reverseAdjacencyList_.MergeFrom(other.reverseAdjacencyList_);
+      if (other.BaseMSat != 0L) {
+        BaseMSat = other.BaseMSat;
+      }
+      if (other.ProportionalMillionths != 0L) {
+        ProportionalMillionths = other.ProportionalMillionths;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            BaseMSat = input.ReadInt64();
+            break;
+          }
+          case 16: {
+            ProportionalMillionths = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            BaseMSat = input.ReadInt64();
+            break;
+          }
+          case 16: {
+            ProportionalMillionths = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class Edge : pb::IMessage<Edge>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<Edge> _parser = new pb::MessageParser<Edge>(() => new Edge());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<Edge> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::LightningGraph.Serialization.LightningFastGraphTopologyReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Edge() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Edge(Edge other) : this() {
+      scid_ = other.scid_;
+      from_ = other.from_;
+      to_ = other.to_;
+      weight_ = other.weight_ != null ? other.weight_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Edge Clone() {
+      return new Edge(this);
+    }
+
+    /// <summary>Field number for the "scid" field.</summary>
+    public const int ScidFieldNumber = 1;
+    private string scid_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Scid {
+      get { return scid_; }
+      set {
+        scid_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "from" field.</summary>
+    public const int FromFieldNumber = 2;
+    private string from_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string From {
+      get { return from_; }
+      set {
+        from_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "to" field.</summary>
+    public const int ToFieldNumber = 3;
+    private string to_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string To {
+      get { return to_; }
+      set {
+        to_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "weight" field.</summary>
+    public const int WeightFieldNumber = 4;
+    private global::LightningGraph.Serialization.Weight weight_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::LightningGraph.Serialization.Weight Weight {
+      get { return weight_; }
+      set {
+        weight_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as Edge);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(Edge other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Scid != other.Scid) return false;
+      if (From != other.From) return false;
+      if (To != other.To) return false;
+      if (!object.Equals(Weight, other.Weight)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Scid.Length != 0) hash ^= Scid.GetHashCode();
+      if (From.Length != 0) hash ^= From.GetHashCode();
+      if (To.Length != 0) hash ^= To.GetHashCode();
+      if (weight_ != null) hash ^= Weight.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Scid.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Scid);
+      }
+      if (From.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(From);
+      }
+      if (To.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(To);
+      }
+      if (weight_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Weight);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Scid.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Scid);
+      }
+      if (From.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(From);
+      }
+      if (To.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(To);
+      }
+      if (weight_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Weight);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Scid.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Scid);
+      }
+      if (From.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(From);
+      }
+      if (To.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(To);
+      }
+      if (weight_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Weight);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(Edge other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Scid.Length != 0) {
+        Scid = other.Scid;
+      }
+      if (other.From.Length != 0) {
+        From = other.From;
+      }
+      if (other.To.Length != 0) {
+        To = other.To;
+      }
+      if (other.weight_ != null) {
+        if (weight_ == null) {
+          Weight = new global::LightningGraph.Serialization.Weight();
+        }
+        Weight.MergeFrom(other.Weight);
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -220,11 +533,22 @@ namespace LightningGraph.Serialization {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 10: {
-            adjacencyList_.AddEntriesFrom(input, _map_adjacencyList_codec);
+            Scid = input.ReadString();
             break;
           }
           case 18: {
-            reverseAdjacencyList_.AddEntriesFrom(input, _map_reverseAdjacencyList_codec);
+            From = input.ReadString();
+            break;
+          }
+          case 26: {
+            To = input.ReadString();
+            break;
+          }
+          case 34: {
+            if (weight_ == null) {
+              Weight = new global::LightningGraph.Serialization.Weight();
+            }
+            input.ReadMessage(Weight);
             break;
           }
         }
@@ -247,11 +571,22 @@ namespace LightningGraph.Serialization {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 10: {
-            adjacencyList_.AddEntriesFrom(ref input, _map_adjacencyList_codec);
+            Scid = input.ReadString();
             break;
           }
           case 18: {
-            reverseAdjacencyList_.AddEntriesFrom(ref input, _map_reverseAdjacencyList_codec);
+            From = input.ReadString();
+            break;
+          }
+          case 26: {
+            To = input.ReadString();
+            break;
+          }
+          case 34: {
+            if (weight_ == null) {
+              Weight = new global::LightningGraph.Serialization.Weight();
+            }
+            input.ReadMessage(Weight);
             break;
           }
         }
@@ -262,21 +597,21 @@ namespace LightningGraph.Serialization {
   }
 
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class EdgeList : pb::IMessage<EdgeList>
+  public sealed partial class GraphTopology : pb::IMessage<GraphTopology>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<EdgeList> _parser = new pb::MessageParser<EdgeList>(() => new EdgeList());
+    private static readonly pb::MessageParser<GraphTopology> _parser = new pb::MessageParser<GraphTopology>(() => new GraphTopology());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<EdgeList> Parser { get { return _parser; } }
+    public static pb::MessageParser<GraphTopology> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LightningGraph.Serialization.LightningFastGraphTopologyReflection.Descriptor.MessageTypes[1]; }
+      get { return global::LightningGraph.Serialization.LightningFastGraphTopologyReflection.Descriptor.MessageTypes[2]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -287,7 +622,7 @@ namespace LightningGraph.Serialization {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public EdgeList() {
+    public GraphTopology() {
       OnConstruction();
     }
 
@@ -295,15 +630,15 @@ namespace LightningGraph.Serialization {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public EdgeList(EdgeList other) : this() {
+    public GraphTopology(GraphTopology other) : this() {
       edges_ = other.edges_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public EdgeList Clone() {
-      return new EdgeList(this);
+    public GraphTopology Clone() {
+      return new GraphTopology(this);
     }
 
     /// <summary>Field number for the "edges" field.</summary>
@@ -320,12 +655,12 @@ namespace LightningGraph.Serialization {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as EdgeList);
+      return Equals(other as GraphTopology);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(EdgeList other) {
+    public bool Equals(GraphTopology other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -390,7 +725,7 @@ namespace LightningGraph.Serialization {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(EdgeList other) {
+    public void MergeFrom(GraphTopology other) {
       if (other == null) {
         return;
       }
@@ -439,352 +774,6 @@ namespace LightningGraph.Serialization {
             break;
           case 10: {
             edges_.AddEntriesFrom(ref input, _repeated_edges_codec);
-            break;
-          }
-        }
-      }
-    }
-    #endif
-
-  }
-
-  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class Edge : pb::IMessage<Edge>
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      , pb::IBufferMessage
-  #endif
-  {
-    private static readonly pb::MessageParser<Edge> _parser = new pb::MessageParser<Edge>(() => new Edge());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<Edge> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::LightningGraph.Serialization.LightningFastGraphTopologyReflection.Descriptor.MessageTypes[2]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Edge() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Edge(Edge other) : this() {
-      scid_ = other.scid_;
-      from_ = other.from_;
-      to_ = other.to_;
-      baseMSat_ = other.baseMSat_;
-      proportionalMillionths_ = other.proportionalMillionths_;
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Edge Clone() {
-      return new Edge(this);
-    }
-
-    /// <summary>Field number for the "scid" field.</summary>
-    public const int ScidFieldNumber = 1;
-    private string scid_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string Scid {
-      get { return scid_; }
-      set {
-        scid_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "from" field.</summary>
-    public const int FromFieldNumber = 2;
-    private string from_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string From {
-      get { return from_; }
-      set {
-        from_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "to" field.</summary>
-    public const int ToFieldNumber = 3;
-    private string to_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string To {
-      get { return to_; }
-      set {
-        to_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "base_m_sat" field.</summary>
-    public const int BaseMSatFieldNumber = 4;
-    private long baseMSat_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public long BaseMSat {
-      get { return baseMSat_; }
-      set {
-        baseMSat_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "proportional_millionths" field.</summary>
-    public const int ProportionalMillionthsFieldNumber = 5;
-    private long proportionalMillionths_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public long ProportionalMillionths {
-      get { return proportionalMillionths_; }
-      set {
-        proportionalMillionths_ = value;
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override bool Equals(object other) {
-      return Equals(other as Edge);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(Edge other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (Scid != other.Scid) return false;
-      if (From != other.From) return false;
-      if (To != other.To) return false;
-      if (BaseMSat != other.BaseMSat) return false;
-      if (ProportionalMillionths != other.ProportionalMillionths) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (Scid.Length != 0) hash ^= Scid.GetHashCode();
-      if (From.Length != 0) hash ^= From.GetHashCode();
-      if (To.Length != 0) hash ^= To.GetHashCode();
-      if (BaseMSat != 0L) hash ^= BaseMSat.GetHashCode();
-      if (ProportionalMillionths != 0L) hash ^= ProportionalMillionths.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void WriteTo(pb::CodedOutputStream output) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      output.WriteRawMessage(this);
-    #else
-      if (Scid.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(Scid);
-      }
-      if (From.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(From);
-      }
-      if (To.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteString(To);
-      }
-      if (BaseMSat != 0L) {
-        output.WriteRawTag(32);
-        output.WriteInt64(BaseMSat);
-      }
-      if (ProportionalMillionths != 0L) {
-        output.WriteRawTag(40);
-        output.WriteInt64(ProportionalMillionths);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (Scid.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(Scid);
-      }
-      if (From.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(From);
-      }
-      if (To.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteString(To);
-      }
-      if (BaseMSat != 0L) {
-        output.WriteRawTag(32);
-        output.WriteInt64(BaseMSat);
-      }
-      if (ProportionalMillionths != 0L) {
-        output.WriteRawTag(40);
-        output.WriteInt64(ProportionalMillionths);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(ref output);
-      }
-    }
-    #endif
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CalculateSize() {
-      int size = 0;
-      if (Scid.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Scid);
-      }
-      if (From.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(From);
-      }
-      if (To.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(To);
-      }
-      if (BaseMSat != 0L) {
-        size += 1 + pb::CodedOutputStream.ComputeInt64Size(BaseMSat);
-      }
-      if (ProportionalMillionths != 0L) {
-        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ProportionalMillionths);
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(Edge other) {
-      if (other == null) {
-        return;
-      }
-      if (other.Scid.Length != 0) {
-        Scid = other.Scid;
-      }
-      if (other.From.Length != 0) {
-        From = other.From;
-      }
-      if (other.To.Length != 0) {
-        To = other.To;
-      }
-      if (other.BaseMSat != 0L) {
-        BaseMSat = other.BaseMSat;
-      }
-      if (other.ProportionalMillionths != 0L) {
-        ProportionalMillionths = other.ProportionalMillionths;
-      }
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(pb::CodedInputStream input) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      input.ReadRawMessage(this);
-    #else
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 10: {
-            Scid = input.ReadString();
-            break;
-          }
-          case 18: {
-            From = input.ReadString();
-            break;
-          }
-          case 26: {
-            To = input.ReadString();
-            break;
-          }
-          case 32: {
-            BaseMSat = input.ReadInt64();
-            break;
-          }
-          case 40: {
-            ProportionalMillionths = input.ReadInt64();
-            break;
-          }
-        }
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-            break;
-          case 10: {
-            Scid = input.ReadString();
-            break;
-          }
-          case 18: {
-            From = input.ReadString();
-            break;
-          }
-          case 26: {
-            To = input.ReadString();
-            break;
-          }
-          case 32: {
-            BaseMSat = input.ReadInt64();
-            break;
-          }
-          case 40: {
-            ProportionalMillionths = input.ReadInt64();
             break;
           }
         }

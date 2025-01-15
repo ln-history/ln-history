@@ -1,5 +1,5 @@
-using Google.Protobuf;
 using LightningGraph.Core;
+using Google.Protobuf;
 
 namespace LightningGraph.Serialization;
 
@@ -7,127 +7,47 @@ public static class LightningFastGraphTopologySerializerService
 {
     public static byte[] SerializeTopology(LightningFastGraph graph)
     {
-        var topology = new Topology();
+        var graphTopology = new GraphTopology();
 
-        // Convert adjacency list
-        foreach (var (nodeId, edges) in graph.AdjacencyList)
+        foreach (var edge in graph.GetEdges())
         {
-            var edgeList = new EdgeList();
-            // Convert domain Edge to protobuf Edge
-            var protoEdges = edges.Select(edge => new Edge
+            graphTopology.Edges.Add(new Edge
             {
                 Scid = edge.Scid,
                 From = edge.From,
                 To = edge.To,
-                BaseMSat = edge.BaseMSat,
-                ProportionalMillionths = edge.ProportionalMillionths
+                Weight = new Weight
+                {
+                    BaseMSat = edge.Weight.BaseMSat,
+                    ProportionalMillionths = edge.Weight.ProportionalMillionths
+                }
             });
-            
-            edgeList.Edges.AddRange(protoEdges);
-            topology.AdjacencyList.Add(nodeId, edgeList);
         }
 
-        // Convert reverse adjacency list
-        foreach (var (nodeId, edges) in graph.ReverseAdjacencyList)
-        {
-            var edgeList = new EdgeList();
-            var protoEdges = edges.Select(edge => new Edge
-            {
-                Scid = edge.Scid,
-                From = edge.From,
-                To = edge.To,
-                BaseMSat = edge.BaseMSat,
-                ProportionalMillionths = edge.ProportionalMillionths
-            });
-            
-            edgeList.Edges.AddRange(protoEdges);
-            topology.ReverseAdjacencyList.Add(nodeId, edgeList);
-        }
-
-        return topology.ToByteArray();
+        return graphTopology.ToByteArray();
     }
 
     public static LightningFastGraph DeserializeTopology(byte[] data)
     {
-        try
+        var graphTopology = GraphTopology.Parser.ParseFrom(data);
+
+        var graph = new LightningFastGraph();
+
+        foreach (var edge in graphTopology.Edges)
         {
-            var topology = Topology.Parser.ParseFrom(data);
-            Console.WriteLine($"Successfully parsed protobuf data");
-            Console.WriteLine($"Adjacency list size: {topology.AdjacencyList.Count}");
-
-            var graph = new LightningFastGraph();
-
-            // Convert adjacency list
-            foreach (var (nodeId, edgeList) in topology.AdjacencyList)
+            graph.AddEdge(new Edge
             {
-                var edges = edgeList.Edges
-                    .Select(protoEdge => new Edge
-                    {
-                        Scid = protoEdge.Scid,
-                        From = protoEdge.From,
-                        To = protoEdge.To,
-                        BaseMSat = protoEdge.BaseMSat,
-                        ProportionalMillionths = protoEdge.ProportionalMillionths
-                    })
-                    .ToList();
-
-                graph.AdjacencyList[nodeId] = edges;
-                Console.WriteLine($"Added {edges.Count} edges for node {nodeId}");
-            }
-
-            // Convert reverse adjacency list
-            foreach (var (nodeId, edgeList) in topology.ReverseAdjacencyList)
-            {
-                var edges = edgeList.Edges
-                    .Select(protoEdge => new Edge
-                    {
-                        Scid = protoEdge.Scid,
-                        From = protoEdge.From,
-                        To = protoEdge.To,
-                        BaseMSat = protoEdge.BaseMSat,
-                        ProportionalMillionths = protoEdge.ProportionalMillionths
-                    })
-                    .ToList();
-
-                graph.ReverseAdjacencyList[nodeId] = edges;
-            }
-
-            Console.WriteLine($"Final graph has {graph.AdjacencyList.Count} nodes");
-            foreach (var (nodeId, edges) in graph.AdjacencyList)
-            {
-                Console.WriteLine($"Node {nodeId} has {edges.Count} edges in final graph");
-            }
-
-            return graph;
+                Scid = edge.Scid,
+                From = edge.From,
+                To = edge.To,
+                Weight = new Weight
+                {
+                    BaseMSat = edge.Weight.BaseMSat,
+                    ProportionalMillionths = edge.Weight.ProportionalMillionths
+                }
+            });
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error during deserialization: {ex}");
-            throw;
-        }
-    }
 
-    private static Edge ConvertToProtobufEdge(Edge edge)
-    {
-        return new Edge
-        {
-            Scid = edge.Scid,
-            From = edge.From,
-            To = edge.To,
-            BaseMSat = edge.BaseMSat,
-            ProportionalMillionths = edge.ProportionalMillionths
-        };
-    }
-
-    private static Edge ConvertFromProtobufEdge(Edge protoEdge)
-    {
-        return new Edge
-        {
-            Scid = protoEdge.Scid,
-            From = protoEdge.From,
-            To = protoEdge.To,
-            BaseMSat = protoEdge.BaseMSat,
-            ProportionalMillionths = protoEdge.ProportionalMillionths
-        };
+        return graph;
     }
 }

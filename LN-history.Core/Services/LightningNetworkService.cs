@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using LightningGraph.Core;
 using LightningGraph.Model;
+using LightningGraph.Serialization;
 using LN_history.Core.Helper;
 using LN_history.Core.Settings;
 using LN_history.Data.DataStores;
@@ -116,12 +117,18 @@ public class LightningNetworkService : ILightningNetworkService
             .Select(n => n.NodeId)
             .ToHashSet();
         
-        lightningNetworkGraph.AddVerticesBatch(_mapper.Map<ICollection<NodeInformation>>(nodesMessages));
+        // lightningNetworkGraph.AddVerticesBatch(_mapper.Map<ICollection<NodeInformation>>(nodesMessages));
+        lightningNetworkGraph.AddVerticesBatch(announcedNodeIds);
         
+        // var validChannels = channelMessages
+        //     .Where(c => announcedNodeIds.Contains(c.NodeId1) && 
+        //                 announcedNodeIds.Contains(c.NodeId2))
+        //     .Select(c => _mapper.Map<ChannelInformation>(c));
+
         var validChannels = channelMessages
             .Where(c => announcedNodeIds.Contains(c.NodeId1) && 
                         announcedNodeIds.Contains(c.NodeId2))
-            .Select(c => _mapper.Map<ChannelInformation>(c));
+            .Select(c => _mapper.Map<Edge>(c));
         
         lightningNetworkGraph.AddEdgesBatch(validChannels);
     
@@ -172,6 +179,6 @@ public class LightningNetworkService : ILightningNetworkService
             paymentSizeSat,
             cancellationToken);
         
-        return lightningNetwork.GetCentralityMetricsEmpirically().AverageCentrality;
+        return lightningNetwork.GetCentralityMetricsEmpirically(paymentSizeSat).AverageCentrality;
     }
 }

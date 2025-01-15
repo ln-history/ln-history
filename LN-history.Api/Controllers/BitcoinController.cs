@@ -50,7 +50,7 @@ public class BitcoinController : ControllerBase
     /// <summary>
     /// Gets a Bitcoin block by DateTime
     /// </summary>
-    /// <param name="timestamp">timestamp in ISO 8601 format</param>
+    /// <param name="timestamp">timestamp in ISO 8601 format (e. g. 2021-01-01)</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpGet("blocks/timestamp/{timestamp}")]
