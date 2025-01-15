@@ -32,18 +32,16 @@ namespace LightningGraph.Serialization {
             "GAEgASgJEhgKBXZhbHVlGAIgASgLMgkuRWRnZUxpc3Q6AjgBGkYKGVJldmVy",
             "c2VBZGphY2VuY3lMaXN0RW50cnkSCwoDa2V5GAEgASgJEhgKBXZhbHVlGAIg",
             "ASgLMgkuRWRnZUxpc3Q6AjgBIiAKCEVkZ2VMaXN0EhQKBWVkZ2VzGAEgAygL",
-            "MgUuRWRnZSJHCgRFZGdlEgwKBHNjaWQYASABKAkSDAoEZnJvbRgCIAEoCRIK",
-            "CgJ0bxgDIAEoCRIXCgZ3ZWlnaHQYBCABKAsyBy5XZWlnaHQiPQoGV2VpZ2h0",
-            "EhIKCmJhc2VfbV9zYXQYASABKAMSHwoXcHJvcG9ydGlvbmFsX21pbGxpb250",
-            "aHMYAiABKANCH6oCHExpZ2h0bmluZ0dyYXBoLlNlcmlhbGl6YXRpb25iBnBy",
-            "b3RvMw=="));
+            "MgUuRWRnZSJjCgRFZGdlEgwKBHNjaWQYASABKAkSDAoEZnJvbRgCIAEoCRIK",
+            "CgJ0bxgDIAEoCRISCgpiYXNlX21fc2F0GAQgASgDEh8KF3Byb3BvcnRpb25h",
+            "bF9taWxsaW9udGhzGAUgASgDQh+qAhxMaWdodG5pbmdHcmFwaC5TZXJpYWxp",
+            "emF0aW9uYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.Topology), global::LightningGraph.Serialization.Topology.Parser, new[]{ "AdjacencyList", "ReverseAdjacencyList" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.EdgeList), global::LightningGraph.Serialization.EdgeList.Parser, new[]{ "Edges" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.Edge), global::LightningGraph.Serialization.Edge.Parser, new[]{ "Scid", "From", "To", "Weight" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.Weight), global::LightningGraph.Serialization.Weight.Parser, new[]{ "BaseMSat", "ProportionalMillionths" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::LightningGraph.Serialization.Edge), global::LightningGraph.Serialization.Edge.Parser, new[]{ "Scid", "From", "To", "BaseMSat", "ProportionalMillionths" }, null, null, null, null)
           }));
     }
     #endregion
@@ -488,7 +486,8 @@ namespace LightningGraph.Serialization {
       scid_ = other.scid_;
       from_ = other.from_;
       to_ = other.to_;
-      weight_ = other.weight_ != null ? other.weight_.Clone() : null;
+      baseMSat_ = other.baseMSat_;
+      proportionalMillionths_ = other.proportionalMillionths_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -534,15 +533,27 @@ namespace LightningGraph.Serialization {
       }
     }
 
-    /// <summary>Field number for the "weight" field.</summary>
-    public const int WeightFieldNumber = 4;
-    private global::LightningGraph.Serialization.Weight weight_;
+    /// <summary>Field number for the "base_m_sat" field.</summary>
+    public const int BaseMSatFieldNumber = 4;
+    private long baseMSat_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::LightningGraph.Serialization.Weight Weight {
-      get { return weight_; }
+    public long BaseMSat {
+      get { return baseMSat_; }
       set {
-        weight_ = value;
+        baseMSat_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "proportional_millionths" field.</summary>
+    public const int ProportionalMillionthsFieldNumber = 5;
+    private long proportionalMillionths_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long ProportionalMillionths {
+      get { return proportionalMillionths_; }
+      set {
+        proportionalMillionths_ = value;
       }
     }
 
@@ -564,7 +575,8 @@ namespace LightningGraph.Serialization {
       if (Scid != other.Scid) return false;
       if (From != other.From) return false;
       if (To != other.To) return false;
-      if (!object.Equals(Weight, other.Weight)) return false;
+      if (BaseMSat != other.BaseMSat) return false;
+      if (ProportionalMillionths != other.ProportionalMillionths) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -575,7 +587,8 @@ namespace LightningGraph.Serialization {
       if (Scid.Length != 0) hash ^= Scid.GetHashCode();
       if (From.Length != 0) hash ^= From.GetHashCode();
       if (To.Length != 0) hash ^= To.GetHashCode();
-      if (weight_ != null) hash ^= Weight.GetHashCode();
+      if (BaseMSat != 0L) hash ^= BaseMSat.GetHashCode();
+      if (ProportionalMillionths != 0L) hash ^= ProportionalMillionths.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -606,9 +619,13 @@ namespace LightningGraph.Serialization {
         output.WriteRawTag(26);
         output.WriteString(To);
       }
-      if (weight_ != null) {
-        output.WriteRawTag(34);
-        output.WriteMessage(Weight);
+      if (BaseMSat != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(BaseMSat);
+      }
+      if (ProportionalMillionths != 0L) {
+        output.WriteRawTag(40);
+        output.WriteInt64(ProportionalMillionths);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -632,9 +649,13 @@ namespace LightningGraph.Serialization {
         output.WriteRawTag(26);
         output.WriteString(To);
       }
-      if (weight_ != null) {
-        output.WriteRawTag(34);
-        output.WriteMessage(Weight);
+      if (BaseMSat != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(BaseMSat);
+      }
+      if (ProportionalMillionths != 0L) {
+        output.WriteRawTag(40);
+        output.WriteInt64(ProportionalMillionths);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -655,8 +676,11 @@ namespace LightningGraph.Serialization {
       if (To.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(To);
       }
-      if (weight_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Weight);
+      if (BaseMSat != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(BaseMSat);
+      }
+      if (ProportionalMillionths != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ProportionalMillionths);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -678,263 +702,6 @@ namespace LightningGraph.Serialization {
       }
       if (other.To.Length != 0) {
         To = other.To;
-      }
-      if (other.weight_ != null) {
-        if (weight_ == null) {
-          Weight = new global::LightningGraph.Serialization.Weight();
-        }
-        Weight.MergeFrom(other.Weight);
-      }
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(pb::CodedInputStream input) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      input.ReadRawMessage(this);
-    #else
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 10: {
-            Scid = input.ReadString();
-            break;
-          }
-          case 18: {
-            From = input.ReadString();
-            break;
-          }
-          case 26: {
-            To = input.ReadString();
-            break;
-          }
-          case 34: {
-            if (weight_ == null) {
-              Weight = new global::LightningGraph.Serialization.Weight();
-            }
-            input.ReadMessage(Weight);
-            break;
-          }
-        }
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-            break;
-          case 10: {
-            Scid = input.ReadString();
-            break;
-          }
-          case 18: {
-            From = input.ReadString();
-            break;
-          }
-          case 26: {
-            To = input.ReadString();
-            break;
-          }
-          case 34: {
-            if (weight_ == null) {
-              Weight = new global::LightningGraph.Serialization.Weight();
-            }
-            input.ReadMessage(Weight);
-            break;
-          }
-        }
-      }
-    }
-    #endif
-
-  }
-
-  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class Weight : pb::IMessage<Weight>
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      , pb::IBufferMessage
-  #endif
-  {
-    private static readonly pb::MessageParser<Weight> _parser = new pb::MessageParser<Weight>(() => new Weight());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<Weight> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::LightningGraph.Serialization.LightningFastGraphTopologyReflection.Descriptor.MessageTypes[3]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Weight() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Weight(Weight other) : this() {
-      baseMSat_ = other.baseMSat_;
-      proportionalMillionths_ = other.proportionalMillionths_;
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Weight Clone() {
-      return new Weight(this);
-    }
-
-    /// <summary>Field number for the "base_m_sat" field.</summary>
-    public const int BaseMSatFieldNumber = 1;
-    private long baseMSat_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public long BaseMSat {
-      get { return baseMSat_; }
-      set {
-        baseMSat_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "proportional_millionths" field.</summary>
-    public const int ProportionalMillionthsFieldNumber = 2;
-    private long proportionalMillionths_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public long ProportionalMillionths {
-      get { return proportionalMillionths_; }
-      set {
-        proportionalMillionths_ = value;
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override bool Equals(object other) {
-      return Equals(other as Weight);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(Weight other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (BaseMSat != other.BaseMSat) return false;
-      if (ProportionalMillionths != other.ProportionalMillionths) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (BaseMSat != 0L) hash ^= BaseMSat.GetHashCode();
-      if (ProportionalMillionths != 0L) hash ^= ProportionalMillionths.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void WriteTo(pb::CodedOutputStream output) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      output.WriteRawMessage(this);
-    #else
-      if (BaseMSat != 0L) {
-        output.WriteRawTag(8);
-        output.WriteInt64(BaseMSat);
-      }
-      if (ProportionalMillionths != 0L) {
-        output.WriteRawTag(16);
-        output.WriteInt64(ProportionalMillionths);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (BaseMSat != 0L) {
-        output.WriteRawTag(8);
-        output.WriteInt64(BaseMSat);
-      }
-      if (ProportionalMillionths != 0L) {
-        output.WriteRawTag(16);
-        output.WriteInt64(ProportionalMillionths);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(ref output);
-      }
-    }
-    #endif
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CalculateSize() {
-      int size = 0;
-      if (BaseMSat != 0L) {
-        size += 1 + pb::CodedOutputStream.ComputeInt64Size(BaseMSat);
-      }
-      if (ProportionalMillionths != 0L) {
-        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ProportionalMillionths);
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(Weight other) {
-      if (other == null) {
-        return;
       }
       if (other.BaseMSat != 0L) {
         BaseMSat = other.BaseMSat;
@@ -961,11 +728,23 @@ namespace LightningGraph.Serialization {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
-          case 8: {
+          case 10: {
+            Scid = input.ReadString();
+            break;
+          }
+          case 18: {
+            From = input.ReadString();
+            break;
+          }
+          case 26: {
+            To = input.ReadString();
+            break;
+          }
+          case 32: {
             BaseMSat = input.ReadInt64();
             break;
           }
-          case 16: {
+          case 40: {
             ProportionalMillionths = input.ReadInt64();
             break;
           }
@@ -988,11 +767,23 @@ namespace LightningGraph.Serialization {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
-          case 8: {
+          case 10: {
+            Scid = input.ReadString();
+            break;
+          }
+          case 18: {
+            From = input.ReadString();
+            break;
+          }
+          case 26: {
+            To = input.ReadString();
+            break;
+          }
+          case 32: {
             BaseMSat = input.ReadInt64();
             break;
           }
-          case 16: {
+          case 40: {
             ProportionalMillionths = input.ReadInt64();
             break;
           }

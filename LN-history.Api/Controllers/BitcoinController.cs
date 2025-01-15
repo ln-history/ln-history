@@ -50,6 +50,8 @@ public class BitcoinController : ControllerBase
     /// <summary>
     /// Gets a Bitcoin block by DateTime
     /// </summary>
+    /// <param name="timestamp">timestamp in ISO 8601 format</param>
+    /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpGet("blocks/timestamp/{timestamp}")]
     [ProducesResponseType( StatusCodes.Status200OK)]
@@ -67,6 +69,8 @@ public class BitcoinController : ControllerBase
     /// <summary>
     /// Gets a Bitcoin block by unix time
     /// </summary>
+    /// <param name="unixTime">Seconds since 01.01.1970</param>
+    /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpGet("blocks/unixTime/{unixTime}")]
     [ProducesResponseType( StatusCodes.Status200OK)]
@@ -84,6 +88,8 @@ public class BitcoinController : ControllerBase
     /// <summary>
     /// Gets a Bitcoin block by block Hash
     /// </summary>
+    /// <param name="hash">Block hash</param>
+    /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpGet("blocks/hash/{hash}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -101,6 +107,8 @@ public class BitcoinController : ControllerBase
     /// <summary>
     /// Gets a Bitcoin block by block height
     /// </summary>
+    /// <param name="height">Block height</param>
+    /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpGet("blocks/height/{height}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -118,6 +126,10 @@ public class BitcoinController : ControllerBase
     /// <summary>
     /// Gets Bitcoin blocks by block height range
     /// </summary>
+    /// <param name="startHeight"></param>
+    /// <param name="endHeight"></param>
+    /// <param name="step"></param>
+    /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpGet("blocks/range/{startHeight}/{endHeight}/{step?}")]
     [ProducesResponseType(StatusCodes.Status200OK)]

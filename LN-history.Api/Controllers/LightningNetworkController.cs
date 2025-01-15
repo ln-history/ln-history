@@ -294,7 +294,7 @@ public class LightningNetworkController : ControllerBase
     }
 
     /// <summary>
-    /// Exports a snapshot of the Lightning Network graph at a specific timestamp
+    /// Exports a snapshot of the Lightning Networks topology at a specific timestamp
     /// </summary>
     /// <remarks>
     /// Creates a point-in-time snapshot of the Lightning Network, including:

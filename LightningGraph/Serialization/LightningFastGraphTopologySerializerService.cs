@@ -19,11 +19,8 @@ public static class LightningFastGraphTopologySerializerService
                 Scid = edge.Scid,
                 From = edge.From,
                 To = edge.To,
-                Weight = new Weight
-                {
-                    BaseMSat = edge.Weight.BaseMSat,
-                    ProportionalMillionths = edge.Weight.ProportionalMillionths
-                }
+                BaseMSat = edge.BaseMSat,
+                ProportionalMillionths = edge.ProportionalMillionths
             });
             
             edgeList.Edges.AddRange(protoEdges);
@@ -39,11 +36,8 @@ public static class LightningFastGraphTopologySerializerService
                 Scid = edge.Scid,
                 From = edge.From,
                 To = edge.To,
-                Weight = new Weight
-                {
-                    BaseMSat = edge.Weight.BaseMSat,
-                    ProportionalMillionths = edge.Weight.ProportionalMillionths
-                }
+                BaseMSat = edge.BaseMSat,
+                ProportionalMillionths = edge.ProportionalMillionths
             });
             
             edgeList.Edges.AddRange(protoEdges);
@@ -60,27 +54,42 @@ public static class LightningFastGraphTopologySerializerService
             var topology = Topology.Parser.ParseFrom(data);
             Console.WriteLine($"Successfully parsed protobuf data");
             Console.WriteLine($"Adjacency list size: {topology.AdjacencyList.Count}");
-        
-            foreach (var (nodeId, edgeList) in topology.AdjacencyList)
-            {
-                Console.WriteLine($"Node {nodeId} has {edgeList.Edges.Count} edges");
-                foreach (var edge in edgeList.Edges)
-                {
-                    Console.WriteLine($"  Edge: {edge.From} -> {edge.To} (SCID: {edge.Scid})");
-                }
-            }
 
             var graph = new LightningFastGraph();
 
+            // Convert adjacency list
             foreach (var (nodeId, edgeList) in topology.AdjacencyList)
             {
-                graph.AdjacencyList[nodeId] = edgeList.Edges.ToList();
-                Console.WriteLine($"Added {edgeList.Edges.Count} edges for node {nodeId}");
+                var edges = edgeList.Edges
+                    .Select(protoEdge => new Edge
+                    {
+                        Scid = protoEdge.Scid,
+                        From = protoEdge.From,
+                        To = protoEdge.To,
+                        BaseMSat = protoEdge.BaseMSat,
+                        ProportionalMillionths = protoEdge.ProportionalMillionths
+                    })
+                    .ToList();
+
+                graph.AdjacencyList[nodeId] = edges;
+                Console.WriteLine($"Added {edges.Count} edges for node {nodeId}");
             }
 
+            // Convert reverse adjacency list
             foreach (var (nodeId, edgeList) in topology.ReverseAdjacencyList)
             {
-                graph.ReverseAdjacencyList[nodeId] = edgeList.Edges.ToList();
+                var edges = edgeList.Edges
+                    .Select(protoEdge => new Edge
+                    {
+                        Scid = protoEdge.Scid,
+                        From = protoEdge.From,
+                        To = protoEdge.To,
+                        BaseMSat = protoEdge.BaseMSat,
+                        ProportionalMillionths = protoEdge.ProportionalMillionths
+                    })
+                    .ToList();
+
+                graph.ReverseAdjacencyList[nodeId] = edges;
             }
 
             Console.WriteLine($"Final graph has {graph.AdjacencyList.Count} nodes");
@@ -105,11 +114,8 @@ public static class LightningFastGraphTopologySerializerService
             Scid = edge.Scid,
             From = edge.From,
             To = edge.To,
-            Weight = new Weight
-            {
-                BaseMSat = edge.Weight.BaseMSat,
-                ProportionalMillionths = edge.Weight.ProportionalMillionths
-            }
+            BaseMSat = edge.BaseMSat,
+            ProportionalMillionths = edge.ProportionalMillionths
         };
     }
 
@@ -120,11 +126,8 @@ public static class LightningFastGraphTopologySerializerService
             Scid = protoEdge.Scid,
             From = protoEdge.From,
             To = protoEdge.To,
-            Weight = new Weight
-            {
-                BaseMSat = protoEdge.Weight.BaseMSat,
-                ProportionalMillionths = protoEdge.Weight.ProportionalMillionths
-            }
+            BaseMSat = protoEdge.BaseMSat,
+            ProportionalMillionths = protoEdge.ProportionalMillionths
         };
     }
 }

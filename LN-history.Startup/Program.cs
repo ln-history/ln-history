@@ -3,6 +3,7 @@ using Bitcoin.Core;
 using Bitcoin.Data;
 using Dapper.FluentMap;
 using Dapper.FluentMap.Dommel;
+using LightningGraph.Model;
 using LN_history.Api;
 using LN_history.Api.Controllers;
 using LN_history.Api.Mapping;
@@ -117,6 +118,17 @@ builder.Services.AddSwaggerGen(options =>
             Array.Empty<string>()
         }
     });
+
+    var apiAssemblies = new[]
+    {
+        Assembly.GetAssembly(typeof(LightningNetworkController))
+    };
+
+    foreach (var assembly in apiAssemblies)
+    {
+        var fileName = $"{assembly!.GetName().Name}.xml";
+        options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, fileName));
+    }
 });
 
 

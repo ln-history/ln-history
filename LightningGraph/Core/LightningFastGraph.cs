@@ -1,4 +1,3 @@
-using System.Text.Json;
 using LightningGraph.GraphAlgorithms.Connectivity;
 using LightningGraph.GraphAlgorithms.Metrics;
 using LightningGraph.Model;
@@ -20,23 +19,24 @@ public class LightningFastGraph
 
     public int EdgeCount => _edgeCount;
 
-    public void AddEdge(string from, string to, string scid, long baseWeight, long proportionalWeight)
+    private void AddEdge(string from, string to, string scid, long baseWeight, long proportionalWeight)
     {
         var edge = new Edge
         {
             Scid = scid,
             From = from,
             To = to,
-            Weight = new Weight { BaseMSat = baseWeight, ProportionalMillionths = proportionalWeight }
+            BaseMSat = baseWeight,
+            ProportionalMillionths = proportionalWeight
         };
 
         if (!AdjacencyList.ContainsKey(from))
         {
-            AdjacencyList[from] = new List<Serialization.Edge>();
+            AdjacencyList[from] = new List<Edge>();
         }
         if (!ReverseAdjacencyList.ContainsKey(to))
         {
-            ReverseAdjacencyList[to] = new List<Serialization.Edge>();
+            ReverseAdjacencyList[to] = new List<Edge>();
         }
 
         AdjacencyList[from].Add(edge);
@@ -109,7 +109,7 @@ public class LightningFastGraph
         if (!AdjacencyList.TryGetValue(nodeId, out var edges)) return (Array.Empty<string>(), Array.Empty<long>());
         return (
             edges.Select(e => e.To).ToArray(),
-            edges.Select(e => e.Weight.BaseMSat + e.Weight.ProportionalMillionths).ToArray()
+            edges.Select(e => e.BaseMSat + e.ProportionalMillionths).ToArray()
         );
     }
 
