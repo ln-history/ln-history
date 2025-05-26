@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LightningGraph.Model;
 using LN_history.Api.Authorization;
 using LN_history.Api.Model;
@@ -16,22 +17,15 @@ namespace LN_history.Api.Controllers;
 [ApiKeyAuthorize]
 public class LightningNetworkController : ControllerBase
 {
-    private readonly ILightningNetworkService _lightningNetworkService;
-    private readonly ILightningNetworkAnalyticalService _lightningNetworkAnalyticalService;
-    private readonly ILightningNetworkSimulationService _lightningNetworkSimulationService;
-    private readonly ILightningNetworkMetricsService _lightningNetworkMetricsService;
-    
     private readonly ILogger<LightningNetworkController> _logger;
     private readonly LightningSettings _settings;
     
+    private readonly INetworkSnapshotService _networkSnapshotService;
 
-    public LightningNetworkController(ILightningNetworkService lightningNetworkService, ILogger<LightningNetworkController> logger, IOptions<LightningSettings> options, ILightningNetworkAnalyticalService lightningNetworkAnalyticalService, ILightningNetworkSimulationService lightningNetworkSimulationService, ILightningNetworkMetricsService lightningNetworkMetricsService)
+    public LightningNetworkController(ILogger<LightningNetworkController> logger, IOptions<LightningSettings> options, INetworkSnapshotService networkSnapshotService)
     {
-        _lightningNetworkService = lightningNetworkService;
         _logger = logger;
-        _lightningNetworkAnalyticalService = lightningNetworkAnalyticalService;
-        _lightningNetworkSimulationService = lightningNetworkSimulationService;
-        _lightningNetworkMetricsService = lightningNetworkMetricsService;
+        _networkSnapshotService = networkSnapshotService;
         _settings = options.Value;
     }
 
@@ -45,8 +39,9 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<int>> GetNodeCountByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result =  await _lightningNetworkService.GetNodeCountByTimestampAsync(timestamp, cancellationToken);
-        return Ok(result);
+        // var result =  await _lightningNetworkService.GetNodeCountByTimestampAsync(timestamp, cancellationToken);
+        // return Ok(result);
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -59,8 +54,9 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<int>> GetEdgeCountByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result =  await _lightningNetworkService.GetEdgeCountByTimestampAsync(timestamp, cancellationToken);
-        return Ok(result);
+        // var result =  await _lightningNetworkService.GetEdgeCountByTimestampAsync(timestamp, cancellationToken);
+        // return Ok(result);
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -75,10 +71,7 @@ public class LightningNetworkController : ControllerBase
     public async Task<ActionResult<double>> GetMedianTransactionCostByTimestampUsingSimulation(int paymentSizeSat, DateTime timestamp,
         CancellationToken cancellationToken)
     {
-        var results = await _lightningNetworkSimulationService.SimulatePaymentsByPaymentSizeAndTimestampWithMonteCarlo(paymentSizeSat, timestamp, cancellationToken);
-        var result = HelperFunctions.CalculateMedian(results.ToList());
-        
-        return Ok(result);
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -93,10 +86,7 @@ public class LightningNetworkController : ControllerBase
     public async Task<ActionResult<double>> GetAverageTransactionCostByTimestampUsingSimulation(int paymentSizeSat, DateTime timestamp,
         CancellationToken cancellationToken)
     {
-        var results = await _lightningNetworkSimulationService.SimulatePaymentsByPaymentSizeAndTimestampWithMonteCarlo(paymentSizeSat, timestamp, cancellationToken);
-        var result = HelperFunctions.CalculateAverage(results.ToList());
-        
-        return Ok(result);
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -111,10 +101,7 @@ public class LightningNetworkController : ControllerBase
     public async Task<ActionResult<double>> GetMedianTransactionCostByTimestampUsingCalculation(int paymentSizeSat, DateTime timestamp,
         CancellationToken cancellationToken)
     {
-        var results = await _lightningNetworkAnalyticalService.CalculateAllShortestPathCostsByPaymentSizeAndTimestamp(paymentSizeSat, timestamp, cancellationToken);
-        var result = HelperFunctions.CalculateMedian(results.ToList());
-        
-        return Ok(result);
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -129,10 +116,7 @@ public class LightningNetworkController : ControllerBase
     public async Task<ActionResult<double>> GetAverageTransactionCostByTimestampUsingCalculation(int paymentSizeSat, DateTime timestamp,
         CancellationToken cancellationToken)
     {
-        var results = await _lightningNetworkAnalyticalService.CalculateAllShortestPathCostsByPaymentSizeAndTimestamp(paymentSizeSat, timestamp, cancellationToken);
-        var result = HelperFunctions.CalculateAverage(results.ToList());
-        
-        return Ok(result);
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -146,9 +130,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetDiameterOfLightningNetworkByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkMetricsService.GetDiameterByTimestampAsync(timestamp, cancellationToken);
-        
-        return Ok(result);
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -161,9 +143,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetAveragePathLengthOfLightningNetworkByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkMetricsService.GetAveragePathLengthByTimestampAsync(timestamp, cancellationToken);
-        
-        return Ok(result);
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -176,9 +156,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetAverageDegreeOfLightningNetworkByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkMetricsService.GetAverageDegreeByTimestampAsync(timestamp, cancellationToken);
-        
-        return Ok(result);
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -192,9 +170,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetAverageLocalClusteringCoefficientOfLightningNetworkByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkMetricsService.GetAverageLocalClusteringCoefficientByTimestampAsync(timestamp, cancellationToken);
-
-        return Ok(result);
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -208,9 +184,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetGlobalClusteringCoefficientOfLightningNetworkByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkMetricsService.GetGlobalClusteringCoefficientByTimestampAsync(timestamp, cancellationToken);
-
-        return Ok(result);
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -225,9 +199,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetDensityOfLightningNetworkByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkMetricsService.GetDensityByTimestampAsync(timestamp, cancellationToken);
-
-        return Ok(result);
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -240,9 +212,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetNetworkMetricsOfLightningNetworkByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkMetricsService.GetNetworkMetricsByTimestampAsync(timestamp, cancellationToken);
-
-        return Ok(result);
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -256,9 +226,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetNumberOfBridgesInLightningNetworkByTimestamp(DateTime timestamp, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkService.GetNumberOfBridgesByTimestampAsync(timestamp, cancellationToken);
-        
-        return Ok(result);
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -272,9 +240,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetCentralityAnalyticallyOfLightningNetworkByTimestamp(DateTime timestamp, int paymentSizeSat, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkService.GetCentralityAnalyticallyByTimestampAsync(timestamp, paymentSizeSat, cancellationToken);
-        
-        return Ok(result);
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -288,9 +254,7 @@ public class LightningNetworkController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<double>> GetCentralityEmpiricallyOfLightningNetworkByTimestamp(DateTime timestamp, int paymentSizeSat, CancellationToken cancellationToken)
     {
-        var result = await _lightningNetworkService.GetCentralityEmpiricallyByTimestampAsync(timestamp, paymentSizeSat, cancellationToken);
-        
-        return Ok(result);
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -300,120 +264,51 @@ public class LightningNetworkController : ControllerBase
     /// Creates a point-in-time snapshot of the Lightning Network, including:
     /// - Node information and attributes
     /// - Channel data and capacities
-    /// - Routing fees calculated for the specified payment size
-    /// 
-    /// The snapshot is stored in MinIO with the key format: `ln-{timestamp}`
     /// </remarks>
-    /// <param name="request">Export parameters</param>
+    /// <param name="timestamp">timestamp of snapshot to export</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <response code="200">Graph exported successfully</response>
     /// <response code="400">Invalid parameters provided</response>
     /// <response code="500">Internal server error during export</response>
     [HttpPost("snapshots")]
-    [ProducesResponseType(typeof(ExportResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<ExportResponse>> ExportSnapshot(
-        [FromBody] ExportSnapshotRequest request,
+    public async Task<IActionResult> ExportSnapshot(
+        DateTime timestamp,
         CancellationToken cancellationToken)
     {
         try
         {
-            await _lightningNetworkService.ExportLightningNetworkByTimestampAsync(
-                request.Timestamp,
-                request.PaymentSizeSat,
-                cancellationToken);
+            var snapshot = await _networkSnapshotService.GetSnapshotAsync(timestamp, cancellationToken: cancellationToken);
 
-            return Ok(new ExportResponse(
-                Message: $"Lightning Network snapshot created for {request.Timestamp:O}",
-                Timestamp: request.Timestamp));
+            var json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+            var fileName = $"ln_snapshot_{timestamp:yyyyMMdd_HHmmss}.json";
+
+            return File(bytes, "application/json", fileName);
         }
         catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Invalid export parameters");
             return BadRequest(new ProblemDetails
             {
-                Title = "Invalid Parameters",
+                Title = "Invalid parameters provided",
                 Detail = ex.Message,
                 Status = StatusCodes.Status400BadRequest
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to export Lightning Network snapshot");
-            return StatusCode(StatusCodes.Status500InternalServerError, 
-                new ProblemDetails
-                {
-                    Title = "Export Failed",
-                    Detail = "Failed to create Lightning Network snapshot",
-                    Status = StatusCodes.Status500InternalServerError
-                });
-        }
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <returns></returns>
-    [HttpPost("export/nodeInformation/{timestamp}")]
-    [ProducesResponseType(typeof(ExportResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<ExportResponse>> ExportNodeInformationByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var lightningNetwork = await _lightningNetworkService.GetLightningNetworkAsync(timestamp, _settings.DefaultPaymentSizeSats, cancellationToken: cancellationToken);
-            
-            await _lightningNetworkService.ExportLightningNodeInformationAsync(timestamp, lightningNetwork, cancellationToken);
-            
-            return Ok(new ExportResponse(
-                Message: $"Successfully exported NodeInformation of Lightning Network at {timestamp:O}",
-                Timestamp: timestamp));
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Failed to export Lightning Network NodeInformation");
-            return StatusCode(StatusCodes.Status500InternalServerError, 
-                new ProblemDetails
-                {
-                    Title = "Export Failed",
-                    Detail = "Failed to export Lightning Network NodeInformation",
-                    Status = StatusCodes.Status500InternalServerError
-                });
-        }
-    }
-    
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <returns></returns>
-    [HttpPost("export/channelInformation/{timestamp}")]
-    [ProducesResponseType(typeof(ExportResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<ExportResponse>> ExportChannelInformationByTimestampAsync(DateTime timestamp, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var lightningNetwork = await _lightningNetworkService.GetLightningNetworkAsync(timestamp, paymentSizeSat: 10_000, cancellationToken: cancellationToken);
-            
-            await _lightningNetworkService.ExportLightningChannelInformationAsync(timestamp, lightningNetwork, cancellationToken);
-            
-            return Ok(new ExportResponse(
-                Message: $"Successfully exported ChannelInformation of Lightning Network at {timestamp:O}",
-                Timestamp: timestamp));
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Failed to export Lightning Network ChannelInformation");
-            return StatusCode(StatusCodes.Status500InternalServerError, 
-                new ProblemDetails
-                {
-                    Title = "Export Failed",
-                    Detail = "Failed to export Lightning Network NodeInformation",
-                    Status = StatusCodes.Status500InternalServerError
-                });
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal server error during export",
+                Detail = ex.Message,
+                Status = StatusCodes.Status500InternalServerError
+            });
         }
     }
 }

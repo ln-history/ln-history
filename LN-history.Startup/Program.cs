@@ -3,13 +3,11 @@ using Bitcoin.Core;
 using Bitcoin.Data;
 using Dapper.FluentMap;
 using Dapper.FluentMap.Dommel;
-using LightningGraph.Model;
 using LN_history.Api;
 using LN_history.Api.Controllers;
 using LN_history.Api.Mapping;
 using LN_history.Cache;
 using LN_history.Core;
-using LN_history.Core.Mapping;
 using LN_history.Core.Services;
 using LN_history.Data;
 using LN_history.Data.Configuration;
@@ -26,10 +24,8 @@ builder.Services.AddBitcoinBlocks(builder.Configuration);
 
 FluentMapper.Initialize(configuration =>
 {
-    configuration.AddMap(new NodeAnnouncementMessageConfiguration());
-    configuration.AddMap(new ChannelUpdateMessageConfiguration());
-    configuration.AddMap(new ChannelAnnouncementMessageConfiguration());
-    configuration.AddMap(new ChannelMessageCompleteConfiguration());
+    configuration.AddMap(new NodeEntityMap());
+    configuration.AddMap(new ChannelEntityMap());
     configuration.ForDommel();
 });
 
@@ -46,10 +42,6 @@ builder.Services.AddApiServices(
 
 builder.Services.AddAutoMapper(typeof(LightningNodeMappingProfile));
 builder.Services.AddAutoMapper(typeof(LightningChannelMappingProfile));
-builder.Services.AddAutoMapper(typeof(ChannelAnnouncementMappingProfile));
-builder.Services.AddAutoMapper(typeof(ChannelUpdateMappingProfile));
-builder.Services.AddAutoMapper(typeof(NodeAnnouncementMappingProfile));
-builder.Services.AddAutoMapper(typeof(ChannelMessageMappingProfile));
 
 
 builder.Services.AddSwaggerGenNewtonsoftSupport();

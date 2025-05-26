@@ -1,6 +1,6 @@
 namespace LN_history.Data.Settings;
 
-public class QuestDbSettings
+public class PostgreSqlDbSettings
 {
     public string ConnectionString { get; set; }
 }

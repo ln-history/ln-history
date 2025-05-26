@@ -31,14 +31,6 @@ public class NodeController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<LightningNodeDto>> GetNodeInformationByNodeId(string nodeId, CancellationToken cancellationToken)
     {
-        var nodeInformation = await _nodeService.GetNodeInformationByNodeId(nodeId, cancellationToken);
-
-        if (nodeInformation == null)
-        {
-            return NotFound($"Node with nodeId {nodeId} not found");
-        }
-
-        var result = _mapper.Map<LightningNodeDto>(nodeInformation);
-        return Ok(result);
+        throw new NotImplementedException();
     }
 }

@@ -10,18 +10,15 @@ public static class ServiceCollectionExtension
 {
     public static void AddLightningNetworkServices(this IServiceCollection serviceCollection, IConfiguration configuration)
     {
-        serviceCollection.AddScoped<INodeService, NodeService>();
-        // serviceCollection.AddScoped<IChannelService, ChannelService>();
-
         // Retrieve bucket name from configuration if not existing use "lightning-fast-graph-topology"
-        var defaultBucketName = configuration.GetSection("MinIO:BucketNameLightningFastGraphTopology").Value 
-                                ?? "lightning-fast-graph-topology";
+        // var defaultBucketName = configuration.GetSection("MinIO:BucketNameLightningFastGraphTopology").Value 
+                                // ?? "lightning-fast-graph-topology";
 
         // Register the bucket name as an option
-        serviceCollection.Configure<LightningNetworkServiceOptions>(options =>
-        {
-            options.BucketName = defaultBucketName;
-        });
+        // serviceCollection.Configure<LightningNetworkServiceOptions>(options =>
+        // {
+        //     options.BucketName = defaultBucketName;
+        // });
 
         // serviceCollection.Configure<LightningSettings>(options =>
         // {
@@ -29,11 +26,8 @@ public static class ServiceCollectionExtension
         //     options.DefaultPaymentSizeSats = Convert.ToInt32(configuration.GetSection("LightningSettings:DefaultPaymentSizeSats").Value);
         // });
         
-        serviceCollection.AddScoped<ILightningNetworkService, LightningNetworkService>();
-        serviceCollection.AddScoped<IExportLightningNetworkService, ExportLightningNetworkService>();
-        serviceCollection.AddScoped<IImportLightningNetworkService, ImportLightningNetworkService>();
-        serviceCollection.AddScoped<ILightningNetworkMetricsService, LightningNetworkMetricsService>();
-        serviceCollection.AddScoped<ILightningNetworkAnalyticalService, LightningNetworkAnalyticalService>();
-        serviceCollection.AddScoped<ILightningNetworkSimulationService, LightningNetworkSimulationService>();
+        serviceCollection.AddScoped<INetworkSnapshotService, NetworkSnapshotService>();
+        serviceCollection.AddScoped<IChannelService, ChannelService>();
+        serviceCollection.AddScoped<INodeService, NodeService>();
     }
 }
