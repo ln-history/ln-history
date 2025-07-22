@@ -18,7 +18,7 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddGossipMessageData(builder.Configuration);
+builder.Services.AddLnHistoryDatabase(builder.Configuration);
 
 builder.Services.AddBitcoinBlocks(builder.Configuration);
 

@@ -1,15 +1,13 @@
-using System.Text.Json;
-using LightningGraph.Model;
+using System.Data;
+using System.IO.Compression;
 using LN_history.Api.Authorization;
-using LN_history.Api.Model;
-using LN_history.Core.Helper;
-using LN_history.Core.Services;
 using LN_history.Data.DataStores;
 using LN_History.Model.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace LN_history.Api.Controllers;
 
@@ -22,13 +20,118 @@ public class LightningNetworkController : ControllerBase
     private readonly LightningSettings _settings;
     
     private readonly INetworkSnapshotDataStore _networkSnapshotDataStore;
+    private readonly NpgsqlConnection _dbConnection;
 
-    public LightningNetworkController(ILogger<LightningNetworkController> logger, IOptions<LightningSettings> options, INetworkSnapshotDataStore networkSnapshotDataStore)
+    public LightningNetworkController(ILogger<LightningNetworkController> logger, IOptions<LightningSettings> options, INetworkSnapshotDataStore networkSnapshotDataStore, NpgsqlConnection dbConnection)
     {
         _logger = logger;
         _settings = options.Value;
         
         _networkSnapshotDataStore = networkSnapshotDataStore;
+        _dbConnection = dbConnection;
+    }
+    
+    [HttpGet("snapshotv2/{timestamp}/stream")]
+    public async Task<IActionResult> GetSnapshotv2Stream(DateTime timestamp, CancellationToken cancellationToken)
+    {
+        await _dbConnection.OpenAsync(cancellationToken);
+    
+        var sql = """
+            SELECT nrg.raw_gossip
+            FROM nodes n
+            JOIN nodes_raw_gossip nrg ON n.node_id_str = nrg.node_id_str
+            WHERE @timestamp BETWEEN n.from_timestamp AND n.last_seen
+              AND nrg.timestamp <= @timestamp
+              AND nrg.timestamp >= @timestamp - INTERVAL '14 days'
+              AND nrg.raw_gossip IS NOT NULL
+            
+            UNION ALL
+            
+            SELECT c.raw_gossip
+            FROM channels c
+            WHERE @timestamp BETWEEN c.from_timestamp AND c.to_timestamp
+              AND c.raw_gossip IS NOT NULL
+            
+            UNION ALL
+            
+            SELECT cu.raw_gossip
+            FROM channel_updates cu
+            WHERE @timestamp BETWEEN cu.from_timestamp AND cu.to_timestamp
+              AND cu.raw_gossip IS NOT NULL
+        """; 
+    
+        Response.ContentType = "application/octet-stream";
+        Response.Headers.Add("Content-Disposition", 
+            $"attachment; filename=snapshot_{timestamp:yyyyMMdd_HHmmss}.bin");
+    
+        using var cmd = new NpgsqlCommand(sql, _dbConnection);
+        cmd.Parameters.AddWithValue("@timestamp", timestamp);
+    
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+    
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            if (!reader.IsDBNull(0))
+            {
+                var bytes = (byte[])reader[0];
+                await Response.Body.WriteAsync(bytes, cancellationToken);
+            }
+        }
+    
+        return new EmptyResult();
+    }
+    
+    //TODO: Fix this method
+    [HttpGet("snapshotv2/{timestamp}/compressed")]
+    public async Task<IActionResult> GetSnapshotv2Compressed(DateTime timestamp, CancellationToken cancellationToken)
+    {
+        // var sql = """
+        //               SELECT nrg.raw_gossip
+        //               FROM nodes n
+        //               JOIN nodes_raw_gossip nrg ON n.node_id_str = nrg.node_id_str
+        //               WHERE @timestamp BETWEEN n.from_timestamp AND n.last_seen
+        //                 AND nrg.timestamp <= @timestamp
+        //                 AND nrg.timestamp >= @timestamp - INTERVAL '14 days'
+        //                 AND nrg.raw_gossip IS NOT NULL
+        //               
+        //               UNION ALL
+        //               
+        //               SELECT c.raw_gossip
+        //               FROM channels c
+        //               WHERE @timestamp BETWEEN c.from_timestamp AND c.to_timestamp
+        //                 AND c.raw_gossip IS NOT NULL
+        //               
+        //               UNION ALL
+        //               
+        //               SELECT cu.raw_gossip
+        //               FROM channel_updates cu
+        //               WHERE @timestamp BETWEEN cu.from_timestamp AND cu.to_timestamp
+        //                 AND cu.raw_gossip IS NOT NULL
+        //           """; 
+        //
+        // Response.ContentType = "application/gzip";
+        // Response.Headers.Add("Content-Disposition", 
+        //     $"attachment; filename=snapshot_{timestamp:yyyyMMdd_HHmmss}.bin.gz");
+        //
+        // await _dbConnection.OpenAsync(cancellationToken);
+        //
+        // using var gzipStream = new GZipStream(Response.Body, CompressionLevel.Fastest);
+        // using var cmd = new NpgsqlCommand(sql, _dbConnection);
+        // cmd.Parameters.AddWithValue("@timestamp", timestamp);
+        //
+        // using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        //
+        // while (await reader.ReadAsync(cancellationToken))
+        // {
+        //     if (!reader.IsDBNull(0))
+        //     {
+        //         var bytes = (byte[])reader[0];
+        //         await gzipStream.WriteAsync(bytes, cancellationToken);
+        //     }
+        // }
+        //
+        // return new EmptyResult();
+        throw new NotImplementedException();
     }
 
     // /// <summary>
@@ -307,4 +410,7 @@ public class LightningNetworkController : ControllerBase
             });
         }
     }
+
+
+    
 }

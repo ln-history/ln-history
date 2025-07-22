@@ -1,14 +1,15 @@
 using System.Data;
 using Dapper;
 using LN_history.Data.Model;
+using Npgsql;
 
 namespace LN_history.Data.DataStores;
 
 public class NetworkSnapshotDataStore : INetworkSnapshotDataStore
 {
-    private readonly IDbConnection _connection;
+    private readonly NpgsqlConnection _connection;
 
-    public NetworkSnapshotDataStore(IDbConnection connection)
+    public NetworkSnapshotDataStore(NpgsqlConnection connection)
     {
         _connection = connection;
     }
