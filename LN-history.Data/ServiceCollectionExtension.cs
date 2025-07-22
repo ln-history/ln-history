@@ -14,7 +14,7 @@ public static class ServiceCollectionExtension
     {
         serviceCollection.Configure<PostgreSqlDbSettings>(options =>
         {
-            options.ConnectionString = configuration.GetConnectionString("QuestDb")! + ";Server Compatibility Mode=NoTypeLoading";
+            options.ConnectionString = configuration.GetConnectionString("PostgreSQL")! + ";Server Compatibility Mode=NoTypeLoading";
         });
         
         // Register IDbConnection factory

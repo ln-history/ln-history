@@ -4,5 +4,5 @@ namespace LN_history.Core.Services;
 
 public interface INetworkSnapshotService
 {
-    Task<NetworkSnapshot> GetSnapshotAsync(DateTime timestamp, CancellationToken cancellationToken);
+    // Task<NetworkSnapshot> GetSnapshotAsync(DateTime timestamp, CancellationToken cancellationToken);
 }

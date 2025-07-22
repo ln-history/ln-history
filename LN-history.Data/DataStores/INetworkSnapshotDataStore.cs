@@ -4,5 +4,5 @@ namespace LN_history.Data.DataStores;
 
 public interface INetworkSnapshotDataStore
 {
-    Task<(IEnumerable<Node>, IEnumerable<Channel>)> GetSnapshotAsync(DateTime timestamp, CancellationToken cancellationToken);
+    Task<byte []?> GetSnapshotAsync(DateTime timestamp, CancellationToken cancellationToken);
 }
