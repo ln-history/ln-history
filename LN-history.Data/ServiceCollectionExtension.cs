@@ -10,28 +10,21 @@ namespace LN_history.Data;
 
 public static class ServiceCollectionExtension
 {
-    public static IServiceCollection AddGossipMessageData(this IServiceCollection serviceCollection, IConfiguration configuration)
+    public static IServiceCollection AddLnHistoryDatabase(this IServiceCollection serviceCollection, IConfiguration configuration)
     {
-        serviceCollection.Configure<QuestDbSettings>(options =>
+        serviceCollection.Configure<PostgreSqlDbSettings>(options =>
         {
-            options.ConnectionString = configuration.GetConnectionString("QuestDb")! + ";Server Compatibility Mode=NoTypeLoading";
+            options.ConnectionString = configuration.GetConnectionString("PostgreSQL")! + ";Server Compatibility Mode=NoTypeLoading";
         });
         
         // Register IDbConnection factory
-        serviceCollection.AddTransient<IDbConnection>(sp =>
+        serviceCollection.AddTransient<NpgsqlConnection>(sp =>
         {
-            var options = sp.GetRequiredService<IOptions<QuestDbSettings>>().Value;
+            var options = sp.GetRequiredService<IOptions<PostgreSqlDbSettings>>().Value;
             return new NpgsqlConnection(options.ConnectionString);
         });
         
-        serviceCollection.AddScoped<INodeAnnouncementDataStore, NodeAnnouncementDataStore>();
-        serviceCollection.AddScoped<IChannelAnnouncementDataStore, ChannelAnnouncementDataStore>();
-        serviceCollection.AddScoped<IChannelUpdateDataStore, ChannelUpdateDataStore>();
-        serviceCollection.AddScoped<ILightningNetworkDataStore, LightningNetworkDataStore>();
-
-        serviceCollection.AddScoped<INodeInformationDataStore, NodeInformationDataStore>();
-        serviceCollection.AddScoped<IChannelInformationDataStore, ChannelInformationDataStore>();
-
+        serviceCollection.AddScoped<INetworkSnapshotDataStore, NetworkSnapshotDataStore>();
         return serviceCollection;
     }
 }

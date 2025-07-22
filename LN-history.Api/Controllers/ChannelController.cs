@@ -32,15 +32,6 @@ public class ChannelController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<LightningChannelDto>> GetChannelInformationByScidAndTimestamp(string scid, DateTime timestamp, int paymentSize = 0, CancellationToken cancellationToken = default)
     {
-        var channelInformation = await _channelService.GetChannelInformationByScid(scid, timestamp, paymentSize, cancellationToken);
-
-        if (channelInformation == null)
-        {
-            return NotFound($"Channel with scid {scid} not found");
-        }
-        
-        var result = _mapper.Map<LightningChannelDto>(channelInformation);
-
-        return result;
+        throw new NotImplementedException();
     }
 }

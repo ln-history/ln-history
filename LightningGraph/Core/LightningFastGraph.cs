@@ -14,8 +14,8 @@ public class LightningFastGraph
     private readonly Dictionary<(string From, string To), Edge> _edges;
     private readonly HashSet<string> _nodes;
 
-    public readonly Dictionary<string, NodeInformation> NodeInformationDict = new();
-    public readonly Dictionary<string, ChannelInformation> EdgeInformationDict = new();
+    // public readonly Dictionary<string, NodeInformation> NodeInformationDict = new();
+    // public readonly Dictionary<string, ChannelInformation> EdgeInformationDict = new();
     
     public int NodeCount { get; private set; } = 0;
 

@@ -21,24 +21,31 @@ public class NodeController : ControllerBase
         _mapper = mapper;
     }
 
-    /// <summary>
-    /// Gets Information of node by nodeId
-    /// </summary>
-    /// <param name="nodeId"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns><see cref="LightningNodeDto"/></returns>
-    [HttpGet("node/{nodeId}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<LightningNodeDto>> GetNodeInformationByNodeId(string nodeId, CancellationToken cancellationToken)
-    {
-        var nodeInformation = await _nodeService.GetNodeInformationByNodeId(nodeId, cancellationToken);
+    // [HttpGet("node_id/{timestamp}")]
+    // public async Task<IActionResult> GetNodeGossipByNodeId(string nodeId)
+    // {
+    //     try
+    //     {
+    //         var fileName = $"snapshot_{timestamp:yyyyMMdd_HHmmss}.bin";
+    //
+    //         return File(, fileName);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         return StatusCode(StatusCodes.Status500InternalServerError, ex);
+    //     }
+    // }
 
-        if (nodeInformation == null)
-        {
-            return NotFound($"Node with nodeId {nodeId} not found");
-        }
-
-        var result = _mapper.Map<LightningNodeDto>(nodeInformation);
-        return Ok(result);
-    }
+    // /// <summary>
+    // /// Gets Information of node by nodeId
+    // /// </summary>
+    // /// <param name="nodeId"></param>
+    // /// <param name="cancellationToken"></param>
+    // /// <returns><see cref="LightningNodeDto"/></returns>
+    // [HttpGet("node/{nodeId}")]
+    // [ProducesResponseType(StatusCodes.Status200OK)]
+    // public async Task<ActionResult<LightningNodeDto>> GetNodeInformationByNodeId(string nodeId, CancellationToken cancellationToken)
+    // {
+    //     throw new NotImplementedException();
+    // }
 }
