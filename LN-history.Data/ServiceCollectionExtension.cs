@@ -33,23 +33,7 @@ public static class ServiceCollectionExtension
             var connectionString = $"Data Source={duckDbPath}";
 
             // Initialize DuckDB connection
-            var connection = new DuckDBConnection(connectionString);
-            connection.Open();
-
-            // Read the number of threads from configuration
-            var threads = configuration["Threads"]; // Fetch the value from configuration
-
-            // Check if threads value is not null or empty
-            if (!string.IsNullOrEmpty(threads))
-            {
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = $"SET threads = {threads};";
-                    command.ExecuteNonQuery();
-                }
-            }
-    
-            return connection;
+            return new DuckDBConnection(connectionString);
         });
         
         serviceCollection.AddScoped<INetworkSnapshotDataStore, NetworkSnapshotDataStore>();

@@ -1,14 +1,17 @@
 using DuckDB.NET.Data;
+using Microsoft.Extensions.Configuration;
 
 namespace LN_history.Data.DataStores;
 
 public class GossipDataStore : IGossipDataStore
 {
     private readonly DuckDBConnection _duckDbConnection;
+    private readonly IConfiguration _configuration;
 
-    public GossipDataStore(DuckDBConnection duckDbConnection)
+    public GossipDataStore(DuckDBConnection duckDbConnection, IConfiguration configuration)
     {
         _duckDbConnection = duckDbConnection;
+        _configuration = configuration;
     }
     
     public MemoryStream GetGossipSnapshotByTimestamp(DateTime timestamp)
@@ -189,8 +192,18 @@ public class GossipDataStore : IGossipDataStore
     private MemoryStream ExecuteQueryAndGetConcatenatedMemoryStream(DuckDBCommand command)
     {
         var concatenatedStream = new MemoryStream();
-
         _duckDbConnection.Open();
+    
+        using (var setThreadCommand = _duckDbConnection.CreateCommand())
+        {
+            var threads = _configuration["Threads"];
+            if (!string.IsNullOrEmpty(threads))
+            {
+                setThreadCommand.CommandText = $"SET threads = {threads};";
+                setThreadCommand.ExecuteNonQuery();
+            }
+        }
+
         try
         {
             using var reader = command.ExecuteReader();
@@ -206,7 +219,7 @@ public class GossipDataStore : IGossipDataStore
         {
             _duckDbConnection.Close();
         }
-
+    
         concatenatedStream.Position = 0;
         return concatenatedStream;
     }
