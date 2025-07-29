@@ -1,138 +1,281 @@
 using Asp.Versioning;
 using LN_history.Api.Authorization;
 using LN_history.Data.DataStores;
-using LN_History.Model.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace LN_history.Api.v1.Controllers;
 
 [ApiController]
 [ApiVersion(1)]
-[Route("ln-history/{v:apiVersion}/[controller]")]
+[Route("ln-history/v{v:apiVersion}/[controller]")]
 [ApiKeyAuthorize]
 public class LightningNetworkController : ControllerBase
 {
     private readonly ILogger<LightningNetworkController> _logger;
-    private readonly LightningSettings _settings;
     
     private readonly INetworkSnapshotDataStore _networkSnapshotDataStore;
     private readonly NpgsqlConnection _dbConnection;
 
-    public LightningNetworkController(ILogger<LightningNetworkController> logger, IOptions<LightningSettings> options, INetworkSnapshotDataStore networkSnapshotDataStore, NpgsqlConnection dbConnection)
+    public LightningNetworkController(ILogger<LightningNetworkController> logger, INetworkSnapshotDataStore networkSnapshotDataStore, NpgsqlConnection dbConnection)
     {
         _logger = logger;
-        _settings = options.Value;
         
         _networkSnapshotDataStore = networkSnapshotDataStore;
         _dbConnection = dbConnection;
     }
     
-    [HttpGet("snapshotv2/{timestamp}/stream")]
-    public async Task<IActionResult> GetSnapshotv2Stream(DateTime timestamp, CancellationToken cancellationToken)
+    /*
+     * JUST FOR BETTER COMPARISION OF THE TIMING
+     */
+    
+    [HttpGet("snapshot/{timestamp}/stream")]
+    public async Task<IActionResult> GetSnapshotStream(DateTime timestamp, CancellationToken cancellationToken)
     {
-        await _dbConnection.OpenAsync(cancellationToken);
-    
-        var sql = """
-            SELECT nrg.raw_gossip
-            FROM nodes n
-            JOIN nodes_raw_gossip nrg ON n.node_id_str = nrg.node_id_str
-            WHERE @timestamp BETWEEN n.from_timestamp AND n.last_seen
-              AND nrg.timestamp <= @timestamp
-              AND nrg.timestamp >= @timestamp - INTERVAL '14 days'
-              AND nrg.raw_gossip IS NOT NULL
-            
-            UNION ALL
-            
-            SELECT c.raw_gossip
-            FROM channels c
-            WHERE @timestamp BETWEEN c.from_timestamp AND c.to_timestamp
-              AND c.raw_gossip IS NOT NULL
-            
-            UNION ALL
-            
-            SELECT cu.raw_gossip
-            FROM channel_updates cu
-            WHERE @timestamp BETWEEN cu.from_timestamp AND cu.to_timestamp
-              AND cu.raw_gossip IS NOT NULL
-        """; 
-    
-        Response.ContentType = "application/octet-stream";
-        Response.Headers.Add("Content-Disposition", 
-            $"attachment; filename=snapshot_{timestamp:yyyyMMdd_HHmmss}.bin");
-    
-        using var cmd = new NpgsqlCommand(sql, _dbConnection);
-        cmd.Parameters.AddWithValue("@timestamp", timestamp);
-    
-        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-    
-        while (await reader.ReadAsync(cancellationToken))
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        _logger.LogInformation("Starting GetSnapshotStream for timestamp: {Timestamp}", timestamp);
+        
+        try
         {
-            if (!reader.IsDBNull(0))
+            // Measure database connection time
+            var connectionStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            await _dbConnection.OpenAsync(cancellationToken);
+            connectionStopwatch.Stop();
+            _logger.LogInformation("Database connection opened in {ElapsedMs}ms", connectionStopwatch.ElapsedMilliseconds);
+
+            var sql = """
+                SELECT nrg.raw_gossip
+                FROM nodes n
+                JOIN nodes_raw_gossip nrg ON n.node_id_str = nrg.node_id_str
+                WHERE @timestamp BETWEEN n.from_timestamp AND n.last_seen
+                  AND nrg.timestamp <= @timestamp
+                  AND nrg.timestamp >= @timestamp - INTERVAL '14 days'
+                
+                UNION ALL
+                
+                SELECT c.raw_gossip
+                FROM channels c
+                WHERE @timestamp BETWEEN c.from_timestamp AND c.to_timestamp
+                
+                UNION ALL
+                
+                SELECT cu.raw_gossip
+                FROM channel_updates cu
+                WHERE @timestamp BETWEEN cu.from_timestamp AND cu.to_timestamp
+            """; 
+
+            Response.ContentType = "application/octet-stream";
+            Response.Headers.Add("Content-Disposition", 
+                $"attachment; filename=snapshot_{timestamp:yyyyMMdd_HHmmss}.bin");
+
+            using var cmd = new NpgsqlCommand(sql, _dbConnection);
+            cmd.Parameters.AddWithValue("@timestamp", timestamp);
+
+            // Measure query execution time
+            var queryStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            queryStopwatch.Stop();
+            _logger.LogInformation("Database query executed in {ElapsedMs}ms", queryStopwatch.ElapsedMilliseconds);
+
+            // Measure data streaming time
+            var streamingStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var bytesWritten = 0L;
+            var recordCount = 0;
+
+            while (await reader.ReadAsync(cancellationToken))
             {
-                var bytes = (byte[])reader[0];
-                await Response.Body.WriteAsync(bytes, cancellationToken);
+                if (!reader.IsDBNull(0))
+                {
+                    var bytes = (byte[])reader[0];
+                    await Response.Body.WriteAsync(bytes, cancellationToken);
+                    bytesWritten += bytes.Length;
+                    recordCount++;
+                }
             }
+            
+            streamingStopwatch.Stop();
+            _logger.LogInformation("Data streaming completed in {ElapsedMs}ms, streamed {BytesWritten} bytes from {RecordCount} records", 
+                streamingStopwatch.ElapsedMilliseconds, bytesWritten, recordCount);
+
+            stopwatch.Stop();
+            _logger.LogInformation("GetSnapshotStream completed successfully in {TotalElapsedMs}ms. Breakdown - Connection: {ConnectionMs}ms, Query: {QueryMs}ms, Streaming: {StreamingMs}ms",
+                stopwatch.ElapsedMilliseconds, connectionStopwatch.ElapsedMilliseconds, queryStopwatch.ElapsedMilliseconds, streamingStopwatch.ElapsedMilliseconds);
+
+            return new EmptyResult();
         }
-    
-        return new EmptyResult();
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "GetSnapshotStream failed after {ElapsedMs}ms for timestamp: {Timestamp}", 
+                stopwatch.ElapsedMilliseconds, timestamp);
+            throw;
+        }
     }
     
-    //TODO: Fix this method
-    [HttpGet("snapshotv2/{timestamp}/compressed")]
-    public async Task<IActionResult> GetSnapshotv2Compressed(DateTime timestamp, CancellationToken cancellationToken)
+    [HttpGet("snapshot/{timestamp}")]
+    [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetSnapshotByTimestamp(
+        DateTime timestamp,
+        CancellationToken cancellationToken)
     {
-        // var sql = """
-        //               SELECT nrg.raw_gossip
-        //               FROM nodes n
-        //               JOIN nodes_raw_gossip nrg ON n.node_id_str = nrg.node_id_str
-        //               WHERE @timestamp BETWEEN n.from_timestamp AND n.last_seen
-        //                 AND nrg.timestamp <= @timestamp
-        //                 AND nrg.timestamp >= @timestamp - INTERVAL '14 days'
-        //                 AND nrg.raw_gossip IS NOT NULL
-        //               
-        //               UNION ALL
-        //               
-        //               SELECT c.raw_gossip
-        //               FROM channels c
-        //               WHERE @timestamp BETWEEN c.from_timestamp AND c.to_timestamp
-        //                 AND c.raw_gossip IS NOT NULL
-        //               
-        //               UNION ALL
-        //               
-        //               SELECT cu.raw_gossip
-        //               FROM channel_updates cu
-        //               WHERE @timestamp BETWEEN cu.from_timestamp AND cu.to_timestamp
-        //                 AND cu.raw_gossip IS NOT NULL
-        //           """; 
-        //
-        // Response.ContentType = "application/gzip";
-        // Response.Headers.Add("Content-Disposition", 
-        //     $"attachment; filename=snapshot_{timestamp:yyyyMMdd_HHmmss}.bin.gz");
-        //
-        // await _dbConnection.OpenAsync(cancellationToken);
-        //
-        // using var gzipStream = new GZipStream(Response.Body, CompressionLevel.Fastest);
-        // using var cmd = new NpgsqlCommand(sql, _dbConnection);
-        // cmd.Parameters.AddWithValue("@timestamp", timestamp);
-        //
-        // using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-        //
-        // while (await reader.ReadAsync(cancellationToken))
-        // {
-        //     if (!reader.IsDBNull(0))
-        //     {
-        //         var bytes = (byte[])reader[0];
-        //         await gzipStream.WriteAsync(bytes, cancellationToken);
-        //     }
-        // }
-        //
-        // return new EmptyResult();
-        throw new NotImplementedException();
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        _logger.LogInformation("Starting GetSnapshotByTimestamp for timestamp: {Timestamp}", timestamp);
+        
+        try
+        {
+            // Measure datastore query time
+            var datastoreStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var bytes = await _networkSnapshotDataStore.GetSnapshotAsync(timestamp, cancellationToken: cancellationToken);
+            datastoreStopwatch.Stop();
+            _logger.LogInformation("Datastore query completed in {ElapsedMs}ms, returned {ByteCount} bytes", 
+                datastoreStopwatch.ElapsedMilliseconds, bytes?.Length ?? 0);
+            
+            var fileName = $"ln_snapshot_{timestamp:yyyyMMdd_HHmmss}.bin";
+            if (bytes == null || bytes.Length == 0)
+            {
+                stopwatch.Stop();
+                _logger.LogWarning("GetSnapshotByTimestamp completed with no data after {ElapsedMs}ms for timestamp: {Timestamp}", 
+                    stopwatch.ElapsedMilliseconds, timestamp);
+                return NotFound("No snapshot data available for the given timestamp.");
+            }
+
+            // Measure file result creation time
+            var fileResultStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var result = File(bytes, "application/octet-stream", fileName);
+            fileResultStopwatch.Stop();
+            _logger.LogInformation("File result creation completed in {ElapsedMs}ms", fileResultStopwatch.ElapsedMilliseconds);
+
+            stopwatch.Stop();
+            _logger.LogInformation("GetSnapshotByTimestamp completed successfully in {TotalElapsedMs}ms. Breakdown - Datastore: {DatastoreMs}ms, FileResult: {FileResultMs}ms",
+                stopwatch.ElapsedMilliseconds, datastoreStopwatch.ElapsedMilliseconds, fileResultStopwatch.ElapsedMilliseconds);
+
+            return result;
+        }
+        catch (ArgumentException ex)
+        {
+            stopwatch.Stop();
+            _logger.LogWarning(ex, "GetSnapshotByTimestamp failed with ArgumentException after {ElapsedMs}ms for timestamp: {Timestamp}", 
+                stopwatch.ElapsedMilliseconds, timestamp);
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid parameters provided",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "GetSnapshotByTimestamp failed after {ElapsedMs}ms for timestamp: {Timestamp}", 
+                stopwatch.ElapsedMilliseconds, timestamp);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal server error during export",
+                Detail = ex.Message,
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
     }
+    
+    // [HttpGet("snapshot/{timestamp}/stream")]
+    // public async Task<IActionResult> GetSnapshotStream(DateTime timestamp, CancellationToken cancellationToken)
+    // {
+    //     await _dbConnection.OpenAsync(cancellationToken);
+    //
+    //     var sql = """
+    //         SELECT nrg.raw_gossip
+    //         FROM nodes n
+    //         JOIN nodes_raw_gossip nrg ON n.node_id_str = nrg.node_id_str
+    //         WHERE @timestamp BETWEEN n.from_timestamp AND n.last_seen
+    //           AND nrg.timestamp <= @timestamp
+    //           AND nrg.timestamp >= @timestamp - INTERVAL '14 days'
+    //         
+    //         UNION ALL
+    //         
+    //         SELECT c.raw_gossip
+    //         FROM channels c
+    //         WHERE @timestamp BETWEEN c.from_timestamp AND c.to_timestamp
+    //         
+    //         UNION ALL
+    //         
+    //         SELECT cu.raw_gossip
+    //         FROM channel_updates cu
+    //         WHERE @timestamp BETWEEN cu.from_timestamp AND cu.to_timestamp
+    //     """; 
+    //
+    //     Response.ContentType = "application/octet-stream";
+    //     Response.Headers.Add("Content-Disposition", 
+    //         $"attachment; filename=snapshot_{timestamp:yyyyMMdd_HHmmss}.bin");
+    //
+    //     using var cmd = new NpgsqlCommand(sql, _dbConnection);
+    //     cmd.Parameters.AddWithValue("@timestamp", timestamp);
+    //
+    //     using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+    //
+    //     while (await reader.ReadAsync(cancellationToken))
+    //     {
+    //         if (!reader.IsDBNull(0))
+    //         {
+    //             var bytes = (byte[])reader[0];
+    //             await Response.Body.WriteAsync(bytes, cancellationToken);
+    //         }
+    //     }
+    //
+    //     return new EmptyResult();
+    // }
+    
+    // /// <summary>
+    // /// Get all raw_gossip necessary to construct the network topology of the Lightning Networks at a specific timestamp
+    // /// </summary>
+    // /// <remarks>
+    // /// raw_gossip is bytes, take a look at client libraries to parse them into something useful.
+    // /// </remarks>
+    // /// <param name="timestamp"></param>
+    // /// <param name="cancellationToken"></param>
+    // /// <response code="200">Successfully got raw_gossip</response>
+    // /// <response code="400">Invalid parameters provided</response>
+    // /// <response code="500">Internal server error when getting raw_gossip data</response>
+    // [HttpGet("snapshot/{timestamp}")]
+    // [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
+    // [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    // [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    // public async Task<IActionResult> GetSnapshotByTimestamp(
+    //     DateTime timestamp,
+    //     CancellationToken cancellationToken)
+    // {
+    //     try
+    //     {
+    //         var bytes = await _networkSnapshotDataStore.GetSnapshotAsync(timestamp, cancellationToken: cancellationToken);
+    //         
+    //         var fileName = $"ln_snapshot_{timestamp:yyyyMMdd_HHmmss}.bin";
+    //         if (bytes == null || bytes.Length == 0)
+    //             return NotFound("No snapshot data available for the given timestamp.");
+    //
+    //         return File(bytes, "application/octet-stream", fileName);
+    //     }
+    //     catch (ArgumentException ex)
+    //     {
+    //         return BadRequest(new ProblemDetails
+    //         {
+    //             Title = "Invalid parameters provided",
+    //             Detail = ex.Message,
+    //             Status = StatusCodes.Status400BadRequest
+    //         });
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+    //         {
+    //             Title = "Internal server error during export",
+    //             Detail = ex.Message,
+    //             Status = StatusCodes.Status500InternalServerError
+    //         });
+    //     }
+    // }
 
     // /// <summary>
     // /// Gets number of nodes in the Lightning Network by timestamp
@@ -361,56 +504,4 @@ public class LightningNetworkController : ControllerBase
     // {
     //     throw new NotImplementedException();
     // }
-
-    /// <summary>
-    /// Get all raw_gossip necessary to construct the network topology of the Lightning Networks at a specific timestamp
-    /// </summary>
-    /// <remarks>
-    /// raw_gossip is bytes, take a look at client libraries to parse them into something useful.
-    /// </remarks>
-    /// <param name="timestamp"></param>
-    /// <param name="cancellationToken"></param>
-    /// <response code="200">Successfully got raw_gossip</response>
-    /// <response code="400">Invalid parameters provided</response>
-    /// <response code="500">Internal server error when getting raw_gossip data</response>
-    [HttpGet("snapshot/{timestamp}")]
-    [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetSnapshotByTimestamp(
-        DateTime timestamp,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var bytes = await _networkSnapshotDataStore.GetSnapshotAsync(timestamp, cancellationToken: cancellationToken);
-            
-            var fileName = $"ln_snapshot_{timestamp:yyyyMMdd_HHmmss}.bin";
-            if (bytes == null || bytes.Length == 0)
-                return NotFound("No snapshot data available for the given timestamp.");
-
-            return File(bytes, "application/octet-stream", fileName);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new ProblemDetails
-            {
-                Title = "Invalid parameters provided",
-                Detail = ex.Message,
-                Status = StatusCodes.Status400BadRequest
-            });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
-            {
-                Title = "Internal server error during export",
-                Detail = ex.Message,
-                Status = StatusCodes.Status500InternalServerError
-            });
-        }
-    }
-
-
-    
 }

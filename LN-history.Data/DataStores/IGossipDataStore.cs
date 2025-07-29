@@ -2,7 +2,9 @@ namespace LN_history.Data.DataStores;
 
 public interface IGossipDataStore
 {
-    MemoryStream GetGossipSnapshotByTimestamp(DateTime timestamp);
+    MemoryStream GetGossipSnapshotByTimestampJoins(DateTime timestamp);
+
+    MemoryStream GetGossipSnapshotByTimestampCuts(DateTime timestamp);
 
     MemoryStream GetGossipSnapshotDifferenceByTimestamps(DateTime startTimestamp, DateTime endTimestamp);
 

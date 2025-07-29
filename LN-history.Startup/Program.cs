@@ -13,7 +13,6 @@ using LN_history.Core;
 using LN_history.Core.Services;
 using LN_history.Data;
 using LN_history.Data.Configuration;
-using LN_History.Model.Settings;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.OpenApi.Models;
@@ -30,8 +29,6 @@ FluentMapper.Initialize(configuration =>
     configuration.AddMap(new ChannelEntityMap());
     configuration.ForDommel();
 });
-
-builder.Services.Configure<LightningSettings>(builder.Configuration.GetSection("LightningSettings"));
 
 builder.Services.AddCaching(builder.Configuration);
 
@@ -92,8 +89,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(opt =>
 {
     // Create separate Swagger specs for v1 and v2
-    opt.SwaggerDoc("v1", new OpenApiInfo { Title = "Lightning Network History", Version = "v1" });
-    opt.SwaggerDoc("v2", new OpenApiInfo { Title = "Lightning Network History", Version = "v2" });
+    opt.SwaggerDoc("v1", new OpenApiInfo { Title = "Lightning Network History", Description = "Queries a PostgreSQL database that stores the data on a SSD", Version = "v1" });
+    opt.SwaggerDoc("v2", new OpenApiInfo { Title = "Lightning Network History", Description = "Queries a DuckDB that stores the data in RAM", Version = "v2" });
 
     // Include XML comments
     var assemblies = new[] { Assembly.GetAssembly(typeof(NodeService)), Assembly.GetAssembly(typeof(GossipController)) };
@@ -141,6 +138,7 @@ app.UseEndpoints(endpoints =>
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
+    options.DocumentTitle = "Lightning Network History";
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "LN-history API V1");
     options.SwaggerEndpoint("/swagger/v2/swagger.json", "LN-history API V2");
 });

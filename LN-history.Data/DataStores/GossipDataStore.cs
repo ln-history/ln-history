@@ -14,7 +14,7 @@ public class GossipDataStore : IGossipDataStore
         _configuration = configuration;
     }
     
-    public MemoryStream GetGossipSnapshotByTimestamp(DateTime timestamp)
+    public MemoryStream GetGossipSnapshotByTimestampJoins(DateTime timestamp)
     {
         using var command = _duckDbConnection.CreateCommand();
 
@@ -34,21 +34,49 @@ public class GossipDataStore : IGossipDataStore
                SELECT nrg.raw_gossip
                FROM unique_nodes un
                JOIN nodes_raw_gossip nrg ON un.node_id = nrg.node_id
-               WHERE nrg.timestamp > $timestamp - INTERVAL '1 year'
-                 AND nrg.raw_gossip IS NOT NULL
+               WHERE nrg.timestamp > $timestamp - INTERVAL '14 days'
            ),
            channel_updates_gossip AS (
                SELECT cu.raw_gossip
                FROM channel_updates cu
                WHERE cu.scid IN (SELECT scid FROM valid_channels)
                  AND $timestamp BETWEEN cu.from_timestamp AND cu.to_timestamp
-                 AND cu.raw_gossip IS NOT NULL
            )
            SELECT raw_gossip FROM valid_channels
            UNION ALL
            SELECT raw_gossip FROM nodes_gossip
            UNION ALL
            SELECT raw_gossip FROM channel_updates_gossip;";
+        
+        command.Parameters.Add(new DuckDBParameter("timestamp", timestamp));
+
+        return ExecuteQueryAndGetConcatenatedMemoryStream(command);
+    }
+    
+    public MemoryStream GetGossipSnapshotByTimestampCuts(DateTime timestamp)
+    {
+        using var command = _duckDbConnection.CreateCommand();
+
+        command.CommandText = @"
+            SELECT nrg.raw_gossip
+            FROM nodes n
+            JOIN nodes_raw_gossip nrg ON n.node_id = nrg.node_id
+            WHERE $timestamp BETWEEN n.from_timestamp AND n.last_seen
+              AND nrg.timestamp <= $timestamp
+              AND nrg.timestamp >= $timestamp - INTERVAL '14 days'
+            
+            UNION ALL
+            
+            SELECT c.raw_gossip
+            FROM channels c
+            WHERE $timestamp BETWEEN c.from_timestamp AND c.to_timestamp
+            
+            UNION ALL
+            
+            SELECT cu.raw_gossip
+            FROM channel_updates cu
+            WHERE $timestamp BETWEEN cu.from_timestamp AND cu.to_timestamp
+        ";
         
         command.Parameters.Add(new DuckDBParameter("timestamp", timestamp));
 
@@ -64,7 +92,6 @@ public class GossipDataStore : IGossipDataStore
             FROM channels AS c
             WHERE c.from_timestamp <= $end_timestamp
               AND (c.to_timestamp >= $start_timestamp OR c.to_timestamp IS NULL)
-              AND c.raw_gossip IS NOT NULL
 
             UNION ALL
 
@@ -72,14 +99,12 @@ public class GossipDataStore : IGossipDataStore
             FROM channel_updates AS cu
             WHERE cu.from_timestamp <= $end_timestamp
               AND cu.to_timestamp >= $start_timestamp
-              AND cu.raw_gossip IS NOT NULL
 
             UNION ALL
 
             SELECT nrg.raw_gossip
             FROM nodes_raw_gossip AS nrg
-            WHERE nrg.timestamp BETWEEN $start_timestamp AND $end_timestamp
-              AND nrg.raw_gossip IS NOT NULL;
+            WHERE nrg.timestamp BETWEEN $start_timestamp AND $end_timestamp;
         ";
         
         command.Parameters.Add(new DuckDBParameter("start_timestamp", startTimestamp));
@@ -98,7 +123,6 @@ public class GossipDataStore : IGossipDataStore
             FROM nodes_raw_gossip nrg
             WHERE nrg.node_id = $node_id
               AND nrg.timestamp <= $timestamp
-              AND nrg.raw_gossip IS NOT NULL
 
             UNION ALL
 
@@ -108,7 +132,6 @@ public class GossipDataStore : IGossipDataStore
             WHERE (c.source_node_id = $node_id OR c.target_node_id = $node_id)
               AND c.from_timestamp <= $timestamp
               AND (c.to_timestamp IS NULL OR c.to_timestamp > $timestamp)
-              AND c.raw_gossip IS NOT NULL
 
             UNION ALL
 
@@ -123,8 +146,7 @@ public class GossipDataStore : IGossipDataStore
                   AND (c.to_timestamp IS NULL OR c.to_timestamp > $timestamp)
             )
             AND cu.from_timestamp <= $timestamp
-            AND cu.to_timestamp > $timestamp
-            AND cu.raw_gossip IS NOT NULL;
+            AND cu.to_timestamp > $timestamp;
         ";
 
         command.Parameters.Add(new DuckDBParameter("node_id", nodeId));
@@ -144,7 +166,6 @@ public class GossipDataStore : IGossipDataStore
             WHERE c.scid = $scid
               AND c.from_timestamp <= $timestamp
               AND (c.to_timestamp IS NULL OR c.to_timestamp > $timestamp)
-              AND c.raw_gossip IS NOT NULL
 
             UNION ALL
 
@@ -153,7 +174,6 @@ public class GossipDataStore : IGossipDataStore
             FROM channel_updates cu
             WHERE cu.scid = $scid
               AND cu.from_timestamp <= $timestamp
-              AND cu.raw_gossip IS NOT NULL
 
             UNION ALL
 
@@ -174,7 +194,6 @@ public class GossipDataStore : IGossipDataStore
                   AND (c.to_timestamp IS NULL OR c.to_timestamp > $timestamp)
             )
             AND nrg.timestamp <= $timestamp
-            AND nrg.raw_gossip IS NOT NULL
             AND nrg.timestamp = (
                 SELECT MAX(nrg2.timestamp)
                 FROM nodes_raw_gossip nrg2
