@@ -39,7 +39,7 @@ public class GossipController : ControllerBase
      return File(fileBytes, "application/octet-stream", fileName);
     }
     
-    [HttpGet("snapshot-diff/{timestamp}/stream")]
+    [HttpGet("snapshot-diff/{startTimestamp}/{endTimestamp}/stream")]
     public IActionResult GetSnapshotDifferenceStream(DateTime startTimestamp, DateTime endTimestamp, CancellationToken cancellationToken)
     {
         var memoryStream = _gossipDataStore.GetGossipSnapshotDifferenceByTimestamps(startTimestamp, endTimestamp);
