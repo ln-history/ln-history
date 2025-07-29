@@ -1,5 +1,4 @@
-using System.Data;
-using System.IO.Compression;
+using Asp.Versioning;
 using LN_history.Api.Authorization;
 using LN_history.Data.DataStores;
 using LN_History.Model.Settings;
@@ -9,10 +8,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
-namespace LN_history.Api.Controllers;
+namespace LN_history.Api.v1.Controllers;
 
 [ApiController]
-[Route("ln-history/[controller]")]
+[ApiVersion(1)]
+[Route("ln-history/{v:apiVersion}/[controller]")]
 [ApiKeyAuthorize]
 public class LightningNetworkController : ControllerBase
 {

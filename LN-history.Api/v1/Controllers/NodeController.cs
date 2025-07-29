@@ -1,14 +1,14 @@
+using Asp.Versioning;
 using AutoMapper;
 using LN_history.Api.Authorization;
-using LN_history.Api.Dto;
 using LN_history.Core.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LN_history.Api.Controllers;
+namespace LN_history.Api.v1.Controllers;
 
 [ApiController]
-[Route("ln-history/[controller]")]
+[ApiVersion(1)]
+[Route("ln-history/{v:apiVersion}/[controller]")]
 [ApiKeyAuthorize]
 public class NodeController : ControllerBase
 {

@@ -1,11 +1,13 @@
 using System.Reflection;
+using Asp.Versioning;
 using Bitcoin.Core;
 using Bitcoin.Data;
 using Dapper.FluentMap;
 using Dapper.FluentMap.Dommel;
 using LN_history.Api;
-using LN_history.Api.Controllers;
 using LN_history.Api.Mapping;
+using LN_history.Api.v1.Controllers;
+using LN_history.Api.v2.Controllers;
 using LN_history.Cache;
 using LN_history.Core;
 using LN_history.Core.Services;
@@ -37,7 +39,7 @@ builder.Services.AddLightningNetworkServices(builder.Configuration);
 builder.Services.AddBitcoinServices();
 
 builder.Services.AddApiServices(
-    [Assembly.GetAssembly(typeof(NodeController))]
+    [Assembly.GetAssembly(typeof(NodeController)), Assembly.GetAssembly(typeof(GossipController))]
 );
 
 builder.Services.AddAutoMapper(typeof(LightningNodeMappingProfile));
@@ -67,35 +69,49 @@ builder.Services
 
 builder.Services.AddEndpointsApiExplorer();
 
+builder.Services.AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1);
+        options.ReportApiVersions = true;
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ApiVersionReader = ApiVersionReader.Combine(
+            new UrlSegmentApiVersionReader(),
+            new HeaderApiVersionReader("X-Api-Version"));
+    })
+    .AddMvc() // This is needed for controllers
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'V";
+        options.SubstituteApiVersionInUrl = true;
+    });
+
+// Add services to the container.
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+// Configure Swagger
 builder.Services.AddSwaggerGen(opt =>
 {
-    var assemblies = new [] {
-        Assembly.GetAssembly(typeof(NodeService))
-    };
+    // Create separate Swagger specs for v1 and v2
+    opt.SwaggerDoc("v1", new OpenApiInfo { Title = "Lightning Network History", Version = "v1" });
+    opt.SwaggerDoc("v2", new OpenApiInfo { Title = "Lightning Network History", Version = "v2" });
 
+    // Include XML comments
+    var assemblies = new[] { Assembly.GetAssembly(typeof(NodeService)), Assembly.GetAssembly(typeof(GossipController)) };
     foreach (var assembly in assemblies)
     {
         var xmlFileName = $"{assembly!.GetName().Name}.xml";
         opt.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFileName));
     }
-    
-    opt.SwaggerDoc("v1", new OpenApiInfo {Title = "Lightning Network History", Version = "v1"});
-});
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+    // Security definition (if applicable to both versions)
+    opt.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
     {
         Name = "x-api-key",
         Type = SecuritySchemeType.ApiKey,
         In = ParameterLocation.Header,
         Description = "API key required to access this API"
     });
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    opt.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
@@ -110,17 +126,6 @@ builder.Services.AddSwaggerGen(options =>
             Array.Empty<string>()
         }
     });
-
-    var apiAssemblies = new[]
-    {
-        Assembly.GetAssembly(typeof(LightningNetworkController))
-    };
-
-    foreach (var assembly in apiAssemblies)
-    {
-        var fileName = $"{assembly!.GetName().Name}.xml";
-        options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, fileName));
-    }
 });
 
 
@@ -133,16 +138,13 @@ app.UseEndpoints(endpoints =>
     endpoints.MapControllers();
 });
 
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "LN-history API V1");
+    options.SwaggerEndpoint("/swagger/v2/swagger.json", "LN-history API V2");
+});
 
-// Configure the HTTP request pipeline.
-// if (app.Environment.IsDevelopment())
-// {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "LN-history API V1");
-    });
-// }
 
 app.UseHttpsRedirection();
 

@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Bitcoin.Core.Services;
 using Bitcoin.Data.Datastores;
 using Bitcoin.Data.Model;
@@ -5,10 +6,11 @@ using LN_history.Api.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LN_history.Api.Controllers;
+namespace LN_history.Api.v1.Controllers;
 
 [ApiController]
-[Route("ln-history/[controller]")]
+[ApiVersion(1)]
+[Route("ln-history/{v:apiVersion}/[controller]")]
 [ApiKeyAuthorize]
 public class BitcoinController : ControllerBase
 {

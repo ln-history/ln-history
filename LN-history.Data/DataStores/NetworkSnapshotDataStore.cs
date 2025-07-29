@@ -17,7 +17,6 @@ public class NetworkSnapshotDataStore : INetworkSnapshotDataStore
     public async Task<byte []?> GetSnapshotAsync(DateTime timestamp, CancellationToken cancellationToken)
     {
         var query = $"""
-                    
                     SELECT nrg.raw_gossip 
                     FROM nodes AS n
                     JOIN nodes_raw_gossip AS nrg 
