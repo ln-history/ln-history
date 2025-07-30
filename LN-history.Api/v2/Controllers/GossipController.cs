@@ -78,7 +78,7 @@ public class GossipController : ControllerBase
     }
 
     [HttpGet("snapshot/{timestamp}/joins/stream")]
-    public IActionResult GetSnapshotStream(DateTime timestamp, CancellationToken cancellationToken)
+    public IActionResult GetSnapshotStreamViaJoins(DateTime timestamp, CancellationToken cancellationToken)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         _logger.LogInformation("Starting GetSnapshotStream for timestamp: {Timestamp}", timestamp);
