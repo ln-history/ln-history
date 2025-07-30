@@ -26,7 +26,7 @@ public class SnapshotController : ControllerBase
     public IActionResult GetSnapshotStreamViaJoins(DateTime timestamp, CancellationToken cancellationToken)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        _logger.LogInformation("Starting GetSnapshotStream for timestamp: {Timestamp}", timestamp);
+        _logger.LogInformation("Starting GetSnapshotStreamViaJoins for timestamp: {Timestamp}", timestamp);
         
         try
         {
@@ -57,7 +57,7 @@ public class SnapshotController : ControllerBase
                 fileReadStopwatch.ElapsedMilliseconds, fileBytes.Length);
 
             stopwatch.Stop();
-            _logger.LogInformation("GetSnapshotStream completed successfully in {TotalElapsedMs}ms. Breakdown - Datastore: {DatastoreMs}ms, FileWrite: {FileWriteMs}ms, FileRead: {FileReadMs}ms",
+            _logger.LogInformation("GetSnapshotStreamViaJoins completed successfully in {TotalElapsedMs}ms. Breakdown - Datastore: {DatastoreMs}ms, FileWrite: {FileWriteMs}ms, FileRead: {FileReadMs}ms",
                 stopwatch.ElapsedMilliseconds, datastoreStopwatch.ElapsedMilliseconds, fileWriteStopwatch.ElapsedMilliseconds, fileReadStopwatch.ElapsedMilliseconds);
 
             return File(fileBytes, "application/octet-stream", fileName);
@@ -65,7 +65,56 @@ public class SnapshotController : ControllerBase
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "GetSnapshotStream failed after {ElapsedMs}ms for timestamp: {Timestamp}", 
+            _logger.LogError(ex, "GetSnapshotStreamViaJoins failed after {ElapsedMs}ms for timestamp: {Timestamp}", 
+                stopwatch.ElapsedMilliseconds, timestamp);
+            throw;
+        }
+    }
+    
+    [HttpGet("snapshot/{timestamp}/joins/stream/optimized")]
+    public IActionResult GetSnapshotStreamViaJoinsOptimized(DateTime timestamp, CancellationToken cancellationToken)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        _logger.LogInformation("Starting GetSnapshotStreamViaJoinsOptimized for timestamp: {Timestamp}", timestamp);
+        
+        try
+        {
+            // Measure datastore query time
+            var datastoreStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var memoryStream = _gossipDataStore.GetGossipSnapshotByTimestampOptimizedJoins(timestamp);
+            datastoreStopwatch.Stop();
+            _logger.LogInformation("Datastore query (Joins, optimized) completed in {ElapsedMs}ms, returned {StreamLength} bytes", 
+                datastoreStopwatch.ElapsedMilliseconds, memoryStream?.Length ?? 0);
+
+            var fileName = $"ln_snapshot_{timestamp:yyyyMMdd_HHmmss}.bin";
+            var tempPath = Path.GetTempFileName();
+
+            // Measure file writing time
+            var fileWriteStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
+            {
+                memoryStream!.CopyTo(fileStream);
+            }
+            fileWriteStopwatch.Stop();
+            _logger.LogInformation("File write to temp location completed in {ElapsedMs}ms", fileWriteStopwatch.ElapsedMilliseconds);
+
+            // Measure file read time
+            var fileReadStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var fileBytes = System.IO.File.ReadAllBytes(tempPath);
+            fileReadStopwatch.Stop();
+            _logger.LogInformation("File read from temp location completed in {ElapsedMs}ms, read {FileSize} bytes", 
+                fileReadStopwatch.ElapsedMilliseconds, fileBytes.Length);
+
+            stopwatch.Stop();
+            _logger.LogInformation("GetSnapshotStreamViaJoinsOptimized completed successfully in {TotalElapsedMs}ms. Breakdown - Datastore: {DatastoreMs}ms, FileWrite: {FileWriteMs}ms, FileRead: {FileReadMs}ms",
+                stopwatch.ElapsedMilliseconds, datastoreStopwatch.ElapsedMilliseconds, fileWriteStopwatch.ElapsedMilliseconds, fileReadStopwatch.ElapsedMilliseconds);
+
+            return File(fileBytes, "application/octet-stream", fileName);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "GetSnapshotStreamViaJoinsOptimized failed after {ElapsedMs}ms for timestamp: {Timestamp}", 
                 stopwatch.ElapsedMilliseconds, timestamp);
             throw;
         }
