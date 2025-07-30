@@ -17,39 +17,39 @@ public class GossipDataStore : IGossipDataStore
     public MemoryStream GetGossipSnapshotByTimestampJoins(DateTime timestamp) {
         using var command = _duckDbConnection.CreateCommand();
         command.CommandText = @"
-        WITH recent_channel_updates AS (
-            SELECT cu.scid, MAX(cu.to_timestamp) AS latest_update
-            FROM channel_updates cu
-            WHERE cu.to_timestamp > $timestamp - INTERVAL '14 days'
-            GROUP BY cu.scid
+        WITH valid_channels AS (
+            SELECT scid, source_node_id, target_node_id
+            FROM channels
+            WHERE $timestamp BETWEEN from_timestamp AND COALESCE(to_timestamp, $timestamp)
         ),
-        active_channels AS (
-            SELECT vc.scid, vc.source_node_id, vc.target_node_id, vc.raw_gossip 
-            FROM channels vc
-            WHERE vc.scid IN (SELECT scid FROM recent_channel_updates)
+        latest_channel_updates AS (
+            SELECT scid, MAX(to_timestamp) AS latest_update
+            FROM channel_updates
+            WHERE scid IN (SELECT scid FROM valid_channels)
+            GROUP BY scid
         ),
-        unique_nodes AS (
-            SELECT DISTINCT source_node_id AS node_id FROM active_channels
-            UNION
-            SELECT DISTINCT target_node_id AS node_id FROM active_channels
+        channels_with_latest_updates AS (
+            SELECT vc.scid, vc.source_node_id, vc.target_node_id, cu.raw_gossip AS channel_update_gossip
+            FROM valid_channels vc
+            JOIN channel_updates cu ON vc.scid = cu.scid
+            JOIN latest_channel_updates lcu ON cu.scid = lcu.scid AND cu.to_timestamp = lcu.latest_update
         ),
         nodes_gossip AS (
-            SELECT nrg.raw_gossip
-            FROM unique_nodes un
-            JOIN nodes_raw_gossip nrg ON un.node_id = nrg.node_id
-            WHERE nrg.timestamp > $timestamp - INTERVAL '14 days'
-        ),
-        latest_channel_updates_gossip AS (
-            SELECT cu.raw_gossip
-            FROM active_channels ac
-            JOIN channel_updates cu ON ac.scid = cu.scid
-            WHERE cu.to_timestamp = (SELECT MAX(cu.to_timestamp) FROM channel_updates WHERE scid = ac.scid AND to_timestamp > $timestamp - INTERVAL '14 days')
-        )       
-        SELECT raw_gossip FROM active_channels
+            SELECT nrg.node_id, nrg.raw_gossip, MAX(nrg.timestamp) AS latest_gossip_timestamp
+            FROM nodes_raw_gossip nrg
+            WHERE nrg.timestamp <= $timestamp
+              AND nrg.node_id IN (
+                  SELECT source_node_id FROM channels_with_latest_updates
+                  UNION
+                  SELECT target_node_id FROM channels_with_latest_updates
+              )
+            GROUP BY nrg.node_id, nrg.raw_gossip
+        )
+        SELECT scid, source_node_id, target_node_id, channel_update_gossip
+        FROM channels_with_latest_updates
         UNION ALL
-        SELECT raw_gossip FROM nodes_gossip
-        UNION ALL
-        SELECT raw_gossip FROM latest_channel_updates_gossip;";
+        SELECT node_id, raw_gossip, NULL, NULL
+        FROM nodes_gossip;";
 
         command.Parameters.Add(new DuckDBParameter("timestamp", timestamp));
         return ExecuteQueryAndGetConcatenatedMemoryStream(command);
