@@ -25,7 +25,7 @@ public class GossipDataStore : IGossipDataStore
         ),
         active_channels AS (
             SELECT vc.scid, vc.source_node_id, vc.target_node_id, vc.raw_gossip 
-            FROM valid_channels vc
+            FROM channels vc
             WHERE vc.scid IN (SELECT scid FROM recent_channel_updates)
         ),
         unique_nodes AS (
