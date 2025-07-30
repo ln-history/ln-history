@@ -216,16 +216,6 @@ public class GossipDataStore : IGossipDataStore
     {
         var concatenatedStream = new MemoryStream();
         _duckDbConnection.Open();
-    
-        using (var setThreadCommand = _duckDbConnection.CreateCommand())
-        {
-            var threads = _configuration["Threads"];
-            if (!string.IsNullOrEmpty(threads))
-            {
-                setThreadCommand.CommandText = $"SET threads = {threads};";
-                setThreadCommand.ExecuteNonQuery();
-            }
-        }
 
         try
         {

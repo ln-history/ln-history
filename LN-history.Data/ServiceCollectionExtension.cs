@@ -27,13 +27,45 @@ public static class ServiceCollectionExtension
         });
         
         // Register DuckDB IDbConnection factory
-        serviceCollection.AddTransient<DuckDBConnection>(sp =>
-        {
+        serviceCollection.AddTransient<DuckDBConnection>(sp => {
             var duckDbPath = configuration.GetConnectionString("DuckDB")!;
             var connectionString = $"Data Source={duckDbPath}";
+            var connection = new DuckDBConnection(connectionString);
+
+            var threads = configuration["Threads"];
+
+            try {
+                connection.Open();
+
+                using (var setThreadsCommand = connection.CreateCommand()) {
+                    // Set number of threads
+                    if (!string.IsNullOrEmpty(threads)) {
+                        setThreadsCommand.CommandText = "SET threads = ?";
+                        setThreadsCommand.Parameters.Add(new DuckDBParameter("threads", threads));
+                        setThreadsCommand.ExecuteNonQuery();
+                    }
+                }
+
+                using (var warmUpCommand = connection.CreateCommand()) {
+                    // Preloading data by executing queries that effectively load data into cache
+                    warmUpCommand.CommandText = @"
+                SELECT * FROM channel_updates LIMIT 1;
+                SELECT * FROM channels LIMIT 1;
+                SELECT * FROM nodes_raw_gossip LIMIT 1;
+                SELECT * FROM nodes LIMIT 1;";
+            
+                    // If you want to ensure everything is loaded, you might need to execute separately
+                    warmUpCommand.ExecuteNonQuery();
+                }
+            } catch (Exception ex) {
+                // Handle exceptions
+                Console.WriteLine("Error during initializing DuckDB connection: " + ex.Message);
+            } finally {
+                connection.Close();
+            }
 
             // Initialize DuckDB connection
-            return new DuckDBConnection(connectionString);
+            return connection;
         });
         
         serviceCollection.AddScoped<INetworkSnapshotDataStore, NetworkSnapshotDataStore>();
