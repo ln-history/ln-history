@@ -18,7 +18,7 @@ public class GossipDataStore : IGossipDataStore
         using var command = _duckDbConnection.CreateCommand();
         command.CommandText = @"
         WITH valid_channels AS (
-            SELECT scid, source_node_id, target_node_id
+            SELECT scid
             FROM channels
             WHERE $timestamp BETWEEN from_timestamp AND COALESCE(to_timestamp, $timestamp)
         ),
@@ -28,28 +28,30 @@ public class GossipDataStore : IGossipDataStore
             WHERE scid IN (SELECT scid FROM valid_channels)
             GROUP BY scid
         ),
-        channels_with_latest_updates AS (
-            SELECT vc.scid, vc.source_node_id, vc.target_node_id, cu.raw_gossip AS channel_update_gossip
-            FROM valid_channels vc
-            JOIN channel_updates cu ON vc.scid = cu.scid
+        channels_gossip AS (
+            SELECT cu.raw_gossip
+            FROM channel_updates cu
             JOIN latest_channel_updates lcu ON cu.scid = lcu.scid AND cu.to_timestamp = lcu.latest_update
         ),
-        nodes_gossip AS (
-            SELECT nrg.node_id, nrg.raw_gossip, MAX(nrg.timestamp) AS latest_gossip_timestamp
+        nodes_unique_ids AS (
+            SELECT DISTINCT source_node_id AS node_id FROM channels
+            UNION
+            SELECT DISTINCT target_node_id AS node_id FROM channels
+        ),
+        nodes_latest_gossip AS (
+            SELECT nrg.raw_gossip
             FROM nodes_raw_gossip nrg
+            JOIN nodes_unique_ids nui ON nrg.node_id = nui.node_id
             WHERE nrg.timestamp <= $timestamp
-              AND nrg.node_id IN (
-                  SELECT source_node_id FROM channels_with_latest_updates
-                  UNION
-                  SELECT target_node_id FROM channels_with_latest_updates
-              )
-            GROUP BY nrg.node_id, nrg.raw_gossip
+            AND nrg.timestamp = (
+                SELECT MAX(nrg2.timestamp)
+                FROM nodes_raw_gossip nrg2
+                WHERE nrg2.node_id = nui.node_id AND nrg2.timestamp <= $timestamp
+            )
         )
-        SELECT scid, source_node_id, target_node_id, channel_update_gossip
-        FROM channels_with_latest_updates
+        SELECT raw_gossip FROM channels_gossip
         UNION ALL
-        SELECT node_id, raw_gossip, NULL, NULL
-        FROM nodes_gossip;";
+        SELECT raw_gossip FROM nodes_latest_gossip;";
 
         command.Parameters.Add(new DuckDBParameter("timestamp", timestamp));
         return ExecuteQueryAndGetConcatenatedMemoryStream(command);
