@@ -36,7 +36,7 @@ builder.Services.AddLightningNetworkServices(builder.Configuration);
 builder.Services.AddBitcoinServices();
 
 builder.Services.AddApiServices(
-    [Assembly.GetAssembly(typeof(NodeController)), Assembly.GetAssembly(typeof(GossipController))]
+    [Assembly.GetAssembly(typeof(LightningNetworkController)), Assembly.GetAssembly(typeof(SnapshotController))]
 );
 
 builder.Services.AddAutoMapper(typeof(LightningNodeMappingProfile));
@@ -93,7 +93,7 @@ builder.Services.AddSwaggerGen(opt =>
     opt.SwaggerDoc("v2", new OpenApiInfo { Title = "Lightning Network History", Description = "Queries a DuckDB that stores the data in RAM", Version = "v2" });
 
     // Include XML comments
-    var assemblies = new[] { Assembly.GetAssembly(typeof(NodeService)), Assembly.GetAssembly(typeof(GossipController)) };
+    var assemblies = new[] { Assembly.GetAssembly(typeof(NodeService)), Assembly.GetAssembly(typeof(SnapshotController)) };
     foreach (var assembly in assemblies)
     {
         var xmlFileName = $"{assembly!.GetName().Name}.xml";

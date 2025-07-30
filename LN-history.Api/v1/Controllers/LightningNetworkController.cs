@@ -27,10 +27,6 @@ public class LightningNetworkController : ControllerBase
         _dbConnection = dbConnection;
     }
     
-    /*
-     * JUST FOR BETTER COMPARISION OF THE TIMING
-     */
-    
     [HttpGet("snapshot/{timestamp}/stream")]
     public async Task<IActionResult> GetSnapshotStream(DateTime timestamp, CancellationToken cancellationToken)
     {

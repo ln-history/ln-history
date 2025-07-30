@@ -17,8 +17,8 @@ public class GossipDataStore : IGossipDataStore
     public MemoryStream GetGossipSnapshotByTimestampJoins(DateTime timestamp) {
         using var command = _duckDbConnection.CreateCommand();
         command.CommandText = @"
-        WITH valid_channels AS (
-            SELECT scid
+        with valid_channels AS (
+            SELECT scid, raw_gossip
             FROM channels
             WHERE $timestamp BETWEEN from_timestamp AND COALESCE(to_timestamp, $timestamp)
         ),
@@ -49,11 +49,62 @@ public class GossipDataStore : IGossipDataStore
                 WHERE nrg2.node_id = nui.node_id AND nrg2.timestamp <= $timestamp
             )
         )
+        
+        SELECT raw_gossip FROM valid_channels
+        UNION ALL
         SELECT raw_gossip FROM channels_gossip
         UNION ALL
         SELECT raw_gossip FROM nodes_latest_gossip;";
 
         command.Parameters.Add(new DuckDBParameter("timestamp", timestamp));
+        return ExecuteQueryAndGetConcatenatedMemoryStream(command);
+    }
+
+    public MemoryStream GetGossipSnapshotByTimestampOptimizedJoins(DateTime timestamp)
+    {
+        using var command = _duckDbConnection.CreateCommand();
+        command.CommandText = @"
+            
+            -- Optimized version with better indexing strategy and reduced subqueries
+            WITH valid_channels AS (
+                SELECT scid, raw_gossip
+                FROM channels
+                WHERE $timestamp BETWEEN from_timestamp AND COALESCE(to_timestamp, $timestamp)
+            ),
+            -- Use window function instead of self-join for better performance
+            latest_channel_updates AS (
+                SELECT 
+                    scid, 
+                    raw_gossip,
+                    ROW_NUMBER() OVER (PARTITION BY scid ORDER BY to_timestamp DESC) as rn
+                FROM channel_updates cu
+                WHERE EXISTS (SELECT 1 FROM valid_channels vc WHERE vc.scid = cu.scid)
+            ),
+            -- Get all unique node IDs in one pass
+            all_node_ids AS (
+                SELECT source_node_id AS node_id FROM channels
+                UNION
+                SELECT target_node_id AS node_id FROM channels
+            ),
+            -- Use window function for nodes as well
+            nodes_latest_gossip AS (
+                SELECT 
+                    raw_gossip,
+                    ROW_NUMBER() OVER (PARTITION BY node_id ORDER BY timestamp DESC) as rn
+                FROM nodes_raw_gossip nrg
+                WHERE timestamp <= $timestamp
+                  AND EXISTS (SELECT 1 FROM all_node_ids ani WHERE ani.node_id = nrg.node_id)
+            )
+
+            SELECT raw_gossip FROM valid_channels
+            UNION ALL
+            SELECT raw_gossip FROM latest_channel_updates WHERE rn = 1
+            UNION ALL
+            SELECT raw_gossip FROM nodes_latest_gossip WHERE rn = 1;    
+        ";
+        
+        command.Parameters.Add(new DuckDBParameter("timestamp", timestamp));
+        
         return ExecuteQueryAndGetConcatenatedMemoryStream(command);
     }
     

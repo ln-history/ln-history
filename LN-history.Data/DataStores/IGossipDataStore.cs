@@ -4,6 +4,8 @@ public interface IGossipDataStore
 {
     MemoryStream GetGossipSnapshotByTimestampJoins(DateTime timestamp);
 
+    MemoryStream GetGossipSnapshotByTimestampOptimizedJoins(DateTime timestamp);
+
     MemoryStream GetGossipSnapshotByTimestampCuts(DateTime timestamp);
 
     MemoryStream GetGossipSnapshotDifferenceByTimestamps(DateTime startTimestamp, DateTime endTimestamp);
