@@ -130,7 +130,7 @@ public class LightningNetworkController : ControllerBase
             _logger.LogInformation("Datastore query completed in {ElapsedMs}ms, returned {ByteCount} bytes", 
                 datastoreStopwatch.ElapsedMilliseconds, bytes?.Length ?? 0);
             
-            var fileName = $"ln_snapshot_{timestamp:yyyyMMdd_HHmmss}.bin";
+            var fileName = $"snapshot_{timestamp:yyyyMMdd_HHmmss}.bin";
             if (bytes == null || bytes.Length == 0)
             {
                 stopwatch.Stop();
@@ -174,6 +174,228 @@ public class LightningNetworkController : ControllerBase
                 Detail = ex.Message,
                 Status = StatusCodes.Status500InternalServerError
             });
+        }
+    }
+    
+    [HttpGet("snapshot/{timestamp}/copy")]
+    public async Task<IActionResult> GetSnapshotCopy(DateTime timestamp, CancellationToken cancellationToken)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        _logger.LogInformation("Starting GetSnapshotCopy for timestamp: {Timestamp}", timestamp);
+
+        try
+        {
+            var connectionStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            await _dbConnection.OpenAsync(cancellationToken);
+            connectionStopwatch.Stop();
+            _logger.LogInformation("Database connection opened in {ElapsedMs}ms", connectionStopwatch.ElapsedMilliseconds);
+
+            // Format timestamp for PostgreSQL
+            var timestampStr = timestamp.ToString("yyyy-MM-dd HH:mm:ss");
+        
+            var copySql = $"""
+                            COPY (
+                                SELECT nrg.raw_gossip
+                                FROM nodes n
+                                JOIN nodes_raw_gossip nrg ON n.node_id_str = nrg.node_id_str
+                                WHERE '{timestampStr}'::timestamp BETWEEN n.from_timestamp AND n.last_seen
+                                  AND nrg.timestamp <= '{timestampStr}'::timestamp
+                                  AND nrg.timestamp >= '{timestampStr}'::timestamp - INTERVAL '14 days'
+                            
+                                UNION ALL
+                            
+                                SELECT c.raw_gossip
+                                FROM channels c
+                                WHERE '{timestampStr}'::timestamp BETWEEN c.from_timestamp AND c.to_timestamp
+                            
+                                UNION ALL
+                            
+                                SELECT cu.raw_gossip
+                                FROM channel_updates cu
+                                WHERE '{timestampStr}'::timestamp BETWEEN cu.from_timestamp AND cu.to_timestamp
+                                  
+                            ) TO STDOUT (FORMAT BINARY)
+                            """;
+
+            // Set response headers before starting the stream
+            Response.ContentType = "application/octet-stream";
+            Response.Headers.Add("Content-Disposition",
+                $"attachment; filename=snapshot_{timestamp:yyyyMMdd_HHmmss}.bin");
+
+            // Use Npgsql's raw binary COPY method to stream directly to response
+            await using var copyStream = await _dbConnection.BeginRawBinaryCopyAsync(copySql, cancellationToken);
+        
+            await copyStream.CopyToAsync(Response.Body, cancellationToken);
+        
+            await Response.Body.FlushAsync(cancellationToken);
+
+            stopwatch.Stop();
+            _logger.LogInformation("GetSnapshotCopy completed in {ElapsedMs}ms", 
+                stopwatch.ElapsedMilliseconds);
+
+            return new EmptyResult();
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "GetSnapshotCopy failed after {ElapsedMs}ms for timestamp: {Timestamp}", 
+                stopwatch.ElapsedMilliseconds, timestamp);
+            throw;
+        }
+    }
+    
+    [HttpGet("snapshot/diff/{startTimestamp}/{endtimestamp}/stream")]
+    public async Task<IActionResult> GetSnapshotDiffStream(DateTime startTimestamp, DateTime endTimestamp, CancellationToken cancellationToken)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        _logger.LogInformation("Starting GetSnapshotDiffStream for startTimestamp: {Timestamp}, endTimestamp {Timestamp}", startTimestamp, endTimestamp);
+        
+        try
+        {
+            // Measure database connection time
+            var connectionStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            await _dbConnection.OpenAsync(cancellationToken);
+            connectionStopwatch.Stop();
+            _logger.LogInformation("Database connection opened in {ElapsedMs}ms", connectionStopwatch.ElapsedMilliseconds);
+
+            var sql = """
+                          SELECT nrg.raw_gossip
+                          FROM nodes_raw_gossip nrg
+                          WHERE nrg.timestamp BETWEEN @startTimestamp AND @endTimestamp
+                      
+                          UNION ALL
+                      
+                          SELECT c.raw_gossip
+                          FROM channels c
+                          WHERE c.from_timestamp <= @endTimestamp
+                            AND (c.to_timestamp IS NULL OR c.to_timestamp >= @startTimestamp)
+                      
+                          UNION ALL
+                      
+                          SELECT cu.raw_gossip
+                          FROM channel_updates cu
+                          WHERE @timestamp BETWEEN cu.from_timestamp AND cu.to_timestamp
+                      """;
+
+            Response.ContentType = "application/octet-stream";
+            Response.Headers.Add("Content-Disposition", 
+                $"attachment; filename=snapshot_{startTimestamp:yyyyMMdd_HHmmss}.bin");
+
+            using var cmd = new NpgsqlCommand(sql, _dbConnection);
+            cmd.Parameters.AddWithValue("@startTimestamp", startTimestamp);
+            cmd.Parameters.AddWithValue("@endTimestamp", endTimestamp);
+
+            // Measure query execution time
+            var queryStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            queryStopwatch.Stop();
+            _logger.LogInformation("Database query executed in {ElapsedMs}ms", queryStopwatch.ElapsedMilliseconds);
+
+            // Measure data streaming time
+            var streamingStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var bytesWritten = 0L;
+            var recordCount = 0;
+
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                if (!reader.IsDBNull(0))
+                {
+                    var bytes = (byte[])reader[0];
+                    await Response.Body.WriteAsync(bytes, cancellationToken);
+                    bytesWritten += bytes.Length;
+                    recordCount++;
+                }
+            }
+            
+            streamingStopwatch.Stop();
+            _logger.LogInformation("Data streaming completed in {ElapsedMs}ms, streamed {BytesWritten} bytes from {RecordCount} records", 
+                streamingStopwatch.ElapsedMilliseconds, bytesWritten, recordCount);
+
+            stopwatch.Stop();
+            _logger.LogInformation("GetSnapshotDiffStream completed successfully in {TotalElapsedMs}ms. Breakdown - Connection: {ConnectionMs}ms, Query: {QueryMs}ms, Streaming: {StreamingMs}ms",
+                stopwatch.ElapsedMilliseconds, connectionStopwatch.ElapsedMilliseconds, queryStopwatch.ElapsedMilliseconds, streamingStopwatch.ElapsedMilliseconds);
+
+            return new EmptyResult();
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "GetSnapshotDiffStream failed after {ElapsedMs}ms for startTimestamp: {Timestamp}", 
+                stopwatch.ElapsedMilliseconds, startTimestamp);
+            throw;
+        }
+    }
+    
+    [HttpGet("snapshot/diff/{startTimestamp}/{endTimestamp}/copy")]
+    public async Task<IActionResult> GetSnapshotDiffCopy(DateTime startTimestamp, DateTime endTimestamp, CancellationToken cancellationToken)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        _logger.LogInformation("Starting GetSnapshotDiffCopy for startTimestamp: {Timestamp}, endTimestamp {Timestamp}", startTimestamp, endTimestamp);
+        
+        try
+        {
+            // Measure database connection time
+            var connectionStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            await _dbConnection.OpenAsync(cancellationToken);
+            connectionStopwatch.Stop();
+            _logger.LogInformation("Database connection opened in {ElapsedMs}ms", connectionStopwatch.ElapsedMilliseconds);
+
+            // Format timestamp for PostgreSQL
+            var startTimestampStr = startTimestamp.ToString("yyyy-MM-dd HH:mm:ss");
+            var endTimestampStr = endTimestamp.ToString("yyyy-MM-dd HH:mm:ss");
+            
+            var copySql = $"""
+                           COPY (
+                               SELECT nrg.raw_gossip
+                               FROM nodes_raw_gossip nrg
+                               WHERE nrg.timestamp BETWEEN '{startTimestampStr}'::timestamp AND '{endTimestampStr}'::timestamp
+                           
+                               UNION ALL
+                           
+                               SELECT c.raw_gossip
+                               FROM channels c
+                               WHERE (c.from_timestamp BETWEEN '{startTimestampStr}'::timestamp AND '{endTimestampStr}'::timestamp)
+                                 OR (c.to_timestamp BETWEEN '{startTimestampStr}'::timestamp AND '{endTimestampStr}'::timestamp)
+                           
+                               UNION ALL
+                           
+                               SELECT cu.raw_gossip
+                               FROM channel_updates cu
+                               WHERE (cu.from_timestamp BETWEEN '{startTimestampStr}'::timestamp AND '{endTimestampStr}'::timestamp)
+                                 OR (cu.to_timestamp BETWEEN '{startTimestampStr}'::timestamp AND '{endTimestampStr}'::timestamp)
+                           ) TO STDOUT (FORMAT BINARY)
+                           """;
+
+            Response.ContentType = "application/octet-stream";
+            Response.Headers.Add("Content-Disposition", 
+                $"attachment; filename=snapshot_diff_from-{startTimestamp:yyyyMMdd_HHmmss}_to-{startTimestamp:yyyyMMdd_HHmmss}.bin");
+
+            // Measure query execution time
+            var copyStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            
+            // Use Npgsql's raw binary COPY method to stream directly to response
+            await using var copyStream = await _dbConnection.BeginRawBinaryCopyAsync(copySql, cancellationToken);
+        
+            await copyStream.CopyToAsync(Response.Body, cancellationToken);
+        
+            await Response.Body.FlushAsync(cancellationToken);
+
+            copyStopwatch.Stop();
+            _logger.LogInformation("GetSnapshotCopy completed in {ElapsedMs}ms", 
+                copyStopwatch.ElapsedMilliseconds);
+
+            stopwatch.Stop();
+            _logger.LogInformation("GetSnapshotDiffCopy completed successfully in {TotalElapsedMs}ms. Breakdown - Connection: {ConnectionMs}ms, Query: {QueryMs}ms",
+                stopwatch.ElapsedMilliseconds, connectionStopwatch.ElapsedMilliseconds, copyStopwatch.ElapsedMilliseconds);
+
+            return new EmptyResult();
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "GetSnapshotDiffCopy failed after {ElapsedMs}ms for startTimestamp: {Timestamp}", 
+                stopwatch.ElapsedMilliseconds, startTimestamp);
+            throw;
         }
     }
     
