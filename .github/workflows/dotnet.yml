@@ -54,6 +54,6 @@ jobs:
           port: 22
           script: |
             cd ~/docker/ln-history-api
-            docker-compose pull
-            docker-compose down
-            docker-compose up -d
+            docker compose pull
+            docker compose down
+            docker compose up -d
