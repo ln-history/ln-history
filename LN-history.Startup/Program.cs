@@ -5,7 +5,9 @@ using Bitcoin.Data;
 using Dapper.FluentMap;
 using Dapper.FluentMap.Dommel;
 using LN_history.Api;
+using LN_history.Api.ApiKeyMiddleware;
 using LN_history.Api.Mapping;
+using LN_history.Api.SimpleApiKeyMiddleware;
 using LN_history.Api.v1.Controllers;
 using LN_history.Api.v2.Controllers;
 using LN_history.Cache;
@@ -15,13 +17,24 @@ using LN_history.Data;
 using LN_history.Data.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var apiKey = builder.Configuration["ApiKey"];
+var trackUsage = builder.Configuration.GetValue<bool>("ApiKeyMiddleware:Enabled");
+
 builder.Services.AddLnHistoryDatabase(builder.Configuration);
 
 builder.Services.AddBitcoinBlocks(builder.Configuration);
+
+// Only add SQLite + middleware if tracking is enabled
+if (trackUsage)
+{
+    builder.Services.AddDbContext<ApiKeyDbContext>(options =>
+        options.UseSqlite(builder.Configuration.GetConnectionString("ApiKeyDatabase")));
+}
 
 FluentMapper.Initialize(configuration =>
 {
@@ -127,6 +140,16 @@ builder.Services.AddSwaggerGen(opt =>
 
 
 var app = builder.Build();
+
+// Add usage tracking middleware if enabled
+if (trackUsage)
+{
+    app.UseMiddleware<ApiKeyTrackingMiddleware>();
+}
+else
+{
+    app.UseMiddleware<SimpleApiKeyMiddleware>();
+}
 
 app.UseRouting();
 

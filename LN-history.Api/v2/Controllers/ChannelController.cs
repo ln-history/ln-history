@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using Asp.Versioning;
-using LN_history.Api.Authorization;
 using LN_history.Data.DataStores;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -10,7 +9,6 @@ namespace LN_history.Api.v2.Controllers;
 [ApiController]
 [ApiVersion(2)]
 [Route("ln-history/v{v:apiVersion}/[controller]")]
-[ApiKeyAuthorize]
 public class ChannelController : ControllerBase
 {
     private readonly ILogger<ChannelController> _logger;

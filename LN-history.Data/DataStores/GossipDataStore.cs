@@ -143,6 +143,12 @@ public class GossipDataStore : IGossipDataStore
         using var command = _duckDbConnection.CreateCommand();
 
         command.CommandText = @"
+            SELECT nrg.raw_gossip
+            FROM nodes_raw_gossip AS nrg
+            WHERE nrg.timestamp BETWEEN $start_timestamp AND $end_timestamp
+
+            UNION ALL
+
             SELECT c.raw_gossip
             FROM channels AS c
             WHERE c.from_timestamp <= $end_timestamp
@@ -153,13 +159,7 @@ public class GossipDataStore : IGossipDataStore
             SELECT cu.raw_gossip
             FROM channel_updates AS cu
             WHERE cu.from_timestamp <= $end_timestamp
-              AND cu.to_timestamp >= $start_timestamp
-
-            UNION ALL
-
-            SELECT nrg.raw_gossip
-            FROM nodes_raw_gossip AS nrg
-            WHERE nrg.timestamp BETWEEN $start_timestamp AND $end_timestamp;
+              AND cu.to_timestamp >= $start_timestamp;
         ";
         
         command.Parameters.Add(new DuckDBParameter("start_timestamp", startTimestamp));

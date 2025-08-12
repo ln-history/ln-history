@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using LN_history.Api.Authorization;
 using LN_history.Data.DataStores;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +10,6 @@ namespace LN_history.Api.v1.Controllers;
 [ApiController]
 [ApiVersion(1)]
 [Route("ln-history/v{v:apiVersion}/[controller]")]
-[ApiKeyAuthorize]
 public class LightningNetworkController : ControllerBase
 {
     private readonly ILogger<LightningNetworkController> _logger;

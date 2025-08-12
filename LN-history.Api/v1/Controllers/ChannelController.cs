@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using LN_history.Api.Dto;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;

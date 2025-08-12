@@ -1,7 +1,4 @@
 using Asp.Versioning;
-using AutoMapper;
-using LN_history.Api.Authorization;
-using LN_history.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
@@ -11,7 +8,6 @@ namespace LN_history.Api.v1.Controllers;
 [ApiController]
 [ApiVersion(1)]
 [Route("ln-history/v{v:apiVersion}/[controller]")]
-[ApiKeyAuthorize]
 public class NodeController : ControllerBase
 {
     private readonly NpgsqlConnection _npgsqlConnection;
