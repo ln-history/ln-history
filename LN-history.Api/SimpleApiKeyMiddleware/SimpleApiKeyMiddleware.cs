@@ -16,6 +16,13 @@ public class SimpleApiKeyMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Skip API key check for Swagger
+        if (context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            await _next(context);
+            return;
+        }
+        
         if (!context.Request.Headers.TryGetValue("x-api-key", out var extractedApiKey))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;

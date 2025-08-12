@@ -15,6 +15,13 @@ public class ApiKeyTrackingMiddleware
 
     public async Task InvokeAsync(HttpContext context, ApiKeyDbContext db)
     {
+        // Skip API key check for Swagger
+        if (context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            await _next(context);
+            return;
+        }
+        
         if (!context.Request.Headers.TryGetValue("x-api-key", out var apiKeyValues) || StringValues.IsNullOrEmpty(apiKeyValues))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
