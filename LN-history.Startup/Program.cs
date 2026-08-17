@@ -3,13 +3,16 @@ using Asp.Versioning;
 using Bitcoin.Data;
 using Microsoft.AspNetCore.HttpOverrides;
 using LN_history.Api;
+using LN_history.Api.Infrastructure;
 using LN_history.Api.Instrumentation;
-using LN_history.Api.SimpleApiKeyMiddleware;
 using LN_history.Core;
 using LN_history.Data;
+using LN_history.Data.Instrumentation;
 using Microsoft.OpenApi.Models;
+using Npgsql;                    // TracerProviderBuilder.AddNpgsql()
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +24,26 @@ builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddRuntimeInstrumentation()
         .AddMeter(AppMetrics.MeterName)
+        .AddMeter(StreamMetrics.MeterName)
+        .AddOtlpExporter())
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation(options =>
+        {
+            // The live-gossip WebSocket is a long-lived connection. Its server span would stay open
+            // for the whole session (hours), only reach Tempo when the client disconnects, and then
+            // land in the span-metrics latency histogram as one multi-hour "request" — which would
+            // hold the ApiHighLatency alert permanently firing. The stream is covered by the
+            // ln_gossip_* metrics instead. Swagger is dropped as pure noise.
+            options.Filter = context =>
+            {
+                var path = context.Request.Path.Value ?? string.Empty;
+                return !path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase)
+                       && !path.TrimEnd('/').EndsWith("/stream", StringComparison.OrdinalIgnoreCase);
+            };
+            options.RecordException = true;
+        })
+        .AddHttpClientInstrumentation()  // Bitcoin Core RPC calls show up as child spans
+        .AddNpgsql()                     // Dapper/Npgsql commands show up as child spans
         .AddOtlpExporter());
 
 builder.Logging.AddOpenTelemetry(options =>
@@ -38,7 +61,7 @@ builder.Services.AddApiServices();
 
 // --- MVC / JSON ---
 builder.Services
-    .AddControllers()
+    .AddControllers(options => options.Filters.Add<CostEnforcementFilter>())
     .AddApplicationPart(typeof(LN_history.Api.Controllers.ChannelController).Assembly)
     .AddJsonOptions(options =>
     {
@@ -108,9 +131,13 @@ forwardedHeadersOptions.KnownNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
+// Enable WebSocket upgrades (used by the live gossip stream endpoint). Must precede the API-key
+// middleware and routing so the handshake is both authenticated and routable.
+app.UseWebSockets();
+
 if (app.Configuration.GetValue<bool>("ApiKeyMiddleware:Enabled"))
 {
-    app.UseMiddleware<SimpleApiKeyMiddleware>();
+    app.UseMiddleware<ApiKeyAuthMiddleware>();
 }
 
 app.UseRouting();

@@ -20,6 +20,7 @@ public class SnapshotController : ControllerBase
 
     /// <summary>All gossip valid at a timestamp as a raw byte stream. withUpdates adds active channel_updates.</summary>
     [HttpGet("snapshot/{timestamp}")]
+    [ResourceCost("snapshot", 100)]
     public async Task<IActionResult> GetSnapshot(
         string timestamp,
         [FromQuery(Name = "withUpdates")] bool withUpdates = false,
@@ -34,6 +35,7 @@ public class SnapshotController : ControllerBase
 
     /// <summary>Gossip that appeared between two timestamps. rawGossip=true returns raw bytes; false returns ordered parsed events.</summary>
     [HttpGet("snapshot-diff/{start}/{end}")]
+    [ResourceCost("snapshot_diff", 40)]
     public async Task<IActionResult> GetSnapshotDiff(
         string start,
         string end,

@@ -22,6 +22,7 @@ public class ChannelController : ControllerBase
 
     /// <summary>Single channel by scid (accepts "865123x1x0" or the 64-bit integer form).</summary>
     [HttpGet("{scid}")]
+    [ResourceCost("channel", 1)]
     public async Task<IActionResult> GetChannel(
         string scid,
         [FromQuery(Name = "nodeInformation")] bool nodeInformation = false,
@@ -43,6 +44,7 @@ public class ChannelController : ControllerBase
 
     /// <summary>Channels valid at a timestamp: no timestamp =&gt; all channels, "now" =&gt; currently open, else open at that instant.</summary>
     [HttpGet]
+    [ResourceCost("channels", 3)]
     public async Task<IActionResult> GetChannels(
         [FromQuery(Name = "timestamp")] string? timestamp = null,
         [FromQuery(Name = "limit")] int? limit = null,
@@ -65,6 +67,7 @@ public class ChannelController : ControllerBase
     /// since channel_announcement gossip carries no capacity.
     /// </summary>
     [HttpGet("capacities")]
+    [ResourceCost("channel_capacities", 5)]
     public async Task<IActionResult> GetChannelCapacities(
         [FromQuery(Name = "timestamp")] string? timestamp = null,
         CancellationToken cancellationToken = default)
@@ -78,6 +81,7 @@ public class ChannelController : ControllerBase
 
     /// <summary>Channel update history. raw=true returns concatenated raw gossip; raw=false the update chain.</summary>
     [HttpGet("{scid}/history")]
+    [ResourceCost("channel_history", 2)]
     public async Task<IActionResult> GetChannelHistory(
         string scid,
         [FromQuery(Name = "raw")] bool raw = false,

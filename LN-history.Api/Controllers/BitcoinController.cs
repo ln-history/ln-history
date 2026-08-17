@@ -20,6 +20,7 @@ public class BitcoinController : ControllerBase
 
     /// <summary>Bitcoin block by height.</summary>
     [HttpGet("{height:long}")]
+    [ResourceCost("block", 1)]
     public async Task<IActionResult> GetByHeight(long height, CancellationToken cancellationToken)
     {
         var block = await _blocks.GetByHeightAsync(height, cancellationToken);
@@ -30,6 +31,7 @@ public class BitcoinController : ControllerBase
 
     /// <summary>Bitcoin block by hash.</summary>
     [HttpGet("{hash:regex(^[[0-9a-fA-F]]{{64}}$)}")]
+    [ResourceCost("block", 1)]
     public async Task<IActionResult> GetByHash(string hash, CancellationToken cancellationToken)
     {
         var block = await _blocks.GetByHashAsync(hash, cancellationToken);
@@ -40,6 +42,7 @@ public class BitcoinController : ControllerBase
 
     /// <summary>The last block mined at or before a timestamp.</summary>
     [HttpGet]
+    [ResourceCost("block", 1)]
     public async Task<IActionResult> GetByTimestamp(
         [FromQuery(Name = "timestamp")] string? timestamp = null,
         CancellationToken cancellationToken = default)

@@ -21,7 +21,10 @@
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.17.0" />
+        <!-- TracerProviderBuilder.AddNpgsql(): emits a client span per SQL command. -->
+        <PackageReference Include="Npgsql.OpenTelemetry" Version="10.0.3" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
         <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="7.2.0" />
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="7.2.0" />

@@ -23,6 +23,7 @@ public class NodeController : ControllerBase
 
     /// <summary>Single node by pubkey. channelCount=all also computes the all-time channel degree.</summary>
     [HttpGet("{nodeId}")]
+    [ResourceCost("node", 2)]
     public async Task<IActionResult> GetNode(
         string nodeId,
         [FromQuery(Name = "raw_gossip")] bool rawGossip = false,
@@ -44,6 +45,7 @@ public class NodeController : ControllerBase
 
     /// <summary>Nodes present at a timestamp: no timestamp =&gt; all nodes, otherwise nodes that existed at that instant.</summary>
     [HttpGet]
+    [ResourceCost("nodes", 3)]
     public async Task<IActionResult> GetNodes(
         [FromQuery(Name = "timestamp")] string? timestamp = null,
         [FromQuery(Name = "limit")] int? limit = null,
@@ -60,6 +62,7 @@ public class NodeController : ControllerBase
 
     /// <summary>Node announcement history. raw=true returns concatenated raw gossip; raw=false the node with its full announcement chain.</summary>
     [HttpGet("{nodeId}/history")]
+    [ResourceCost("node_history", 3)]
     public async Task<IActionResult> GetNodeHistory(
         string nodeId,
         [FromQuery(Name = "raw")] bool raw = false,
@@ -86,6 +89,7 @@ public class NodeController : ControllerBase
 
     /// <summary>Channels a node participates in (as source or target).</summary>
     [HttpGet("{nodeId}/channels")]
+    [ResourceCost("node_channels", 3)]
     public async Task<IActionResult> GetNodeChannels(
         string nodeId,
         [FromQuery(Name = "raw_gossip")] bool rawGossip = false,
