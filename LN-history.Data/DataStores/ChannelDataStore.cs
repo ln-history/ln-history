@@ -17,7 +17,7 @@ public class ChannelDataStore : IChannelDataStore
     }
 
     private const string ChannelColumns =
-        "scid, funding_timestamp, closing_timestamp, capacity_sat, source_node_id, target_node_id, gossip_id, internal_id";
+        "scid, funding_timestamp, closing_timestamp, announceable_timestamp, capacity_sat, source_node_id, target_node_id, gossip_id, internal_id";
 
     public async Task<Channel?> GetByScidAsync(long scid, DateTime? asOf, bool includeRawGossip, CancellationToken cancellationToken)
     {

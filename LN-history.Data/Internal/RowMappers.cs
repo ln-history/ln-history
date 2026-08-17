@@ -13,6 +13,7 @@ internal static class RowMappers
         Scid = row.Scid,
         FundingTimestamp = row.FundingTimestamp,
         ClosingTimestamp = row.ClosingTimestamp,
+        AnnounceableTimestamp = row.AnnounceableTimestamp,
         CapacitySat = row.CapacitySat,
         NodeId1 = row.SourceNodeId,
         NodeId2 = row.TargetNodeId,

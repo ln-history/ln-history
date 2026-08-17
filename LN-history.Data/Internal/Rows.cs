@@ -8,6 +8,7 @@ internal sealed class ChannelRow
     public long Scid { get; set; }
     public DateTime FundingTimestamp { get; set; }
     public DateTime? ClosingTimestamp { get; set; }
+    public DateTime? AnnounceableTimestamp { get; set; }
     public long CapacitySat { get; set; }
     public string SourceNodeId { get; set; } = string.Empty;
     public string TargetNodeId { get; set; } = string.Empty;

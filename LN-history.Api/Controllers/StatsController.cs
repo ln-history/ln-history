@@ -24,6 +24,7 @@ public class StatsController : ControllerBase
 
     /// <summary>Top channels by capacity | update_count | lifetime.</summary>
     [HttpGet("channels/top")]
+    [ResourceCost("stats_channels", 3)]
     public async Task<IActionResult> TopChannels(
         [FromQuery(Name = "by")] string by = "capacity",
         [FromQuery(Name = "limit")] int? limit = null,
@@ -45,6 +46,7 @@ public class StatsController : ControllerBase
 
     /// <summary>Top nodes by channels | announcements | capacity.</summary>
     [HttpGet("nodes/top")]
+    [ResourceCost("stats_nodes", 3)]
     public async Task<IActionResult> TopNodes(
         [FromQuery(Name = "by")] string by = "channels",
         [FromQuery(Name = "limit")] int? limit = null,
@@ -66,6 +68,7 @@ public class StatsController : ControllerBase
 
     /// <summary>Network-wide counts, currently or at a timestamp.</summary>
     [HttpGet("network")]
+    [ResourceCost("stats_network", 3)]
     public async Task<IActionResult> Network(
         [FromQuery(Name = "timestamp")] string? timestamp = null,
         CancellationToken cancellationToken = default)
@@ -79,6 +82,7 @@ public class StatsController : ControllerBase
 
     /// <summary>Closure counts and mining-fee totals by type over an optional [from, to] window.</summary>
     [HttpGet("closures")]
+    [ResourceCost("stats_closures", 3)]
     public async Task<IActionResult> Closures(
         [FromQuery(Name = "from")] string? from = null,
         [FromQuery(Name = "to")] string? to = null,

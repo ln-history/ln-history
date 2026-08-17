@@ -3,8 +3,8 @@ using Asp.Versioning;
 using Bitcoin.Data;
 using Microsoft.AspNetCore.HttpOverrides;
 using LN_history.Api;
+using LN_history.Api.Infrastructure;
 using LN_history.Api.Instrumentation;
-using LN_history.Api.SimpleApiKeyMiddleware;
 using LN_history.Core;
 using LN_history.Data;
 using Microsoft.OpenApi.Models;
@@ -38,7 +38,7 @@ builder.Services.AddApiServices();
 
 // --- MVC / JSON ---
 builder.Services
-    .AddControllers()
+    .AddControllers(options => options.Filters.Add<CostEnforcementFilter>())
     .AddApplicationPart(typeof(LN_history.Api.Controllers.ChannelController).Assembly)
     .AddJsonOptions(options =>
     {
@@ -108,9 +108,13 @@ forwardedHeadersOptions.KnownNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
+// Enable WebSocket upgrades (used by the live gossip stream endpoint). Must precede the API-key
+// middleware and routing so the handshake is both authenticated and routable.
+app.UseWebSockets();
+
 if (app.Configuration.GetValue<bool>("ApiKeyMiddleware:Enabled"))
 {
-    app.UseMiddleware<SimpleApiKeyMiddleware>();
+    app.UseMiddleware<ApiKeyAuthMiddleware>();
 }
 
 app.UseRouting();

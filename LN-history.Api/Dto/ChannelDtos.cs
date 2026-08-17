@@ -68,6 +68,10 @@ public sealed class ChannelDto
     public string ScidStr { get; set; } = string.Empty;
     public DateTime FundingTimestamp { get; set; }
     public DateTime? ClosingTimestamp { get; set; }
+
+    /// <summary>Timestamp of the block 5 after the funding block (6-confirmation announceable
+    /// point). Null if not yet backfilled by chain-enricher.</summary>
+    public DateTime? AnnounceableTimestamp { get; set; }
     public ChannelClosureDto? ClosingInformation { get; set; }
     public long CapacitySat { get; set; }
 
