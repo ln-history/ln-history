@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Threading.Channels;
 using LN_history.Data.DataStores;
+using LN_history.Data.Instrumentation;
 using LN_History.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -26,13 +27,17 @@ public sealed class GossipNotificationListener : BackgroundService
 
     private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(5);
 
+    /// <summary>Capacity of the fetch queue; kept as a field so depth can be reported as a metric.</summary>
+    private const int PendingCapacity = 16_384;
+
     private readonly NpgsqlDataSource _dataSource;
     private readonly IGossipStream _stream;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<GossipNotificationListener> _logger;
+    private readonly StreamMetrics _metrics;
 
     private readonly Channel<(long InternalId, int Type)> _pending =
-        System.Threading.Channels.Channel.CreateBounded<(long, int)>(new BoundedChannelOptions(16_384)
+        System.Threading.Channels.Channel.CreateBounded<(long, int)>(new BoundedChannelOptions(PendingCapacity)
         {
             FullMode = BoundedChannelFullMode.DropOldest,
             SingleReader = true,
@@ -43,12 +48,14 @@ public sealed class GossipNotificationListener : BackgroundService
         NpgsqlDataSource dataSource,
         IGossipStream stream,
         IServiceScopeFactory scopeFactory,
-        ILogger<GossipNotificationListener> logger)
+        ILogger<GossipNotificationListener> logger,
+        StreamMetrics metrics)
     {
         _dataSource = dataSource;
         _stream = stream;
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _metrics = metrics;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -72,6 +79,7 @@ public sealed class GossipNotificationListener : BackgroundService
                         await cmd.ExecuteNonQueryAsync(stoppingToken);
                     }
                     _logger.LogInformation("Listening for gossip notifications on '{Channel}'.", NotifyChannel);
+                    _metrics.SetListenerConnected(true);
 
                     // WaitAsync returns whenever a notification arrives (raising Notification); loop to keep waiting.
                     while (!stoppingToken.IsCancellationRequested)
@@ -80,6 +88,7 @@ public sealed class GossipNotificationListener : BackgroundService
                 finally
                 {
                     connection.Notification -= OnNotification;
+                    _metrics.SetListenerConnected(false);
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -88,6 +97,7 @@ public sealed class GossipNotificationListener : BackgroundService
             }
             catch (Exception ex)
             {
+                _metrics.ListenerReconnects.Add(1);
                 _logger.LogError(ex, "Gossip LISTEN connection failed; reconnecting in {Delay}s.", ReconnectDelay.TotalSeconds);
                 try { await Task.Delay(ReconnectDelay, stoppingToken); }
                 catch (OperationCanceledException) { break; }
@@ -97,10 +107,22 @@ public sealed class GossipNotificationListener : BackgroundService
 
     private void OnNotification(object? sender, NpgsqlNotificationEventArgs e)
     {
-        if (TryParsePayload(e.Payload, out var internalId, out var type))
-            _pending.Writer.TryWrite((internalId, type));
-        else
+        _metrics.NotificationsReceived.Add(1);
+        if (!TryParsePayload(e.Payload, out var internalId, out var type))
+        {
+            _metrics.NotificationsDiscarded.Add(1, new KeyValuePair<string, object?>("reason", "malformed"));
             _logger.LogWarning("Ignoring malformed gossip notification payload: {Payload}", e.Payload);
+            return;
+        }
+
+        // The queue is drop-oldest, so TryWrite never reports the loss. Sample the depth first so a
+        // backed-up fetch loop is visible instead of silently shedding gossip.
+        var depth = _pending.Reader.Count;
+        _metrics.SetFetchQueueDepth(depth);
+        if (depth >= PendingCapacity)
+            _metrics.NotificationsDiscarded.Add(1, new KeyValuePair<string, object?>("reason", "queue_full"));
+
+        _pending.Writer.TryWrite((internalId, type));
     }
 
     private async Task PumpLoopAsync(CancellationToken stoppingToken)
@@ -115,9 +137,15 @@ public sealed class GossipNotificationListener : BackgroundService
                     var store = scope.ServiceProvider.GetRequiredService<IGossipRawStore>();
                     var raw = await store.GetRawByInternalIdAsync(internalId, type, stoppingToken);
                     if (raw is { Length: > 0 })
+                    {
                         _stream.Publish(new GossipFrame(internalId, type, raw));
+                        _metrics.FramesPublished.Add(1, new KeyValuePair<string, object?>("msg_type", type));
+                    }
                     else
+                    {
+                        _metrics.NotificationsDiscarded.Add(1, new KeyValuePair<string, object?>("reason", "no_raw_gossip"));
                         _logger.LogDebug("No raw gossip for internal_id {InternalId} (type {Type}); skipped.", internalId, type);
+                    }
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -125,7 +153,12 @@ public sealed class GossipNotificationListener : BackgroundService
                 }
                 catch (Exception ex)
                 {
+                    _metrics.FetchFailures.Add(1);
                     _logger.LogError(ex, "Failed to fetch/publish gossip for internal_id {InternalId}.", internalId);
+                }
+                finally
+                {
+                    _metrics.SetFetchQueueDepth(_pending.Reader.Count);
                 }
             }
         }

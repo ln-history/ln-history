@@ -1,7 +1,9 @@
 using System.Diagnostics;
+using LN_history.Api.Instrumentation;
 using LN_history.Core.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging;
 
 namespace LN_history.Api.Infrastructure;
 
@@ -14,8 +16,15 @@ namespace LN_history.Api.Infrastructure;
 public sealed class CostEnforcementFilter : IAsyncResourceFilter
 {
     private readonly IApiAccessService _access;
+    private readonly AppMetrics _metrics;
+    private readonly ILogger<CostEnforcementFilter> _logger;
 
-    public CostEnforcementFilter(IApiAccessService access) => _access = access;
+    public CostEnforcementFilter(IApiAccessService access, AppMetrics metrics, ILogger<CostEnforcementFilter> logger)
+    {
+        _access = access;
+        _metrics = metrics;
+        _logger = logger;
+    }
 
     public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
     {
@@ -33,6 +42,10 @@ public sealed class CostEnforcementFilter : IAsyncResourceFilter
         var (routeKey, weight) = cost.Value;
         var charge = _access.Charge(record, weight);
 
+        _metrics.ChargeResults.Add(1,
+            new KeyValuePair<string, object?>("route_key", routeKey),
+            new KeyValuePair<string, object?>("outcome", OutcomeTag(charge.Outcome)));
+
         if (!record.IsAdmin)
         {
             http.Response.Headers["X-RateLimit-Remaining"] = charge.RemainingBudget.ToString();
@@ -42,6 +55,9 @@ public sealed class CostEnforcementFilter : IAsyncResourceFilter
         if (!charge.Allowed)
         {
             http.Response.Headers.RetryAfter = charge.RetryAfterSeconds.ToString();
+            _logger.LogWarning(
+                "Rate-limited {Owner} on {RouteKey}: {Outcome}, {Remaining} budget units left, resets at {Reset}.",
+                record.OwnerLabel, routeKey, charge.Outcome, charge.RemainingBudget, charge.ResetUnixSeconds);
             context.Result = TooMany(charge);
             return; // handler never runs; DB untouched
         }
@@ -52,7 +68,10 @@ public sealed class CostEnforcementFilter : IAsyncResourceFilter
 
         var failed = executed.Exception is not null || http.Response.StatusCode >= 400;
         if (failed)
+        {
             _access.Refund(record, weight);
+            _metrics.ChargeRefunds.Add(weight, new KeyValuePair<string, object?>("route_key", routeKey));
+        }
 
         var bytes = http.Response.ContentLength ?? 0;
         _access.RecordActuals(record, routeKey, failed ? 0 : weight, sw.ElapsedMilliseconds, bytes);
@@ -72,6 +91,14 @@ public sealed class CostEnforcementFilter : IAsyncResourceFilter
 
         return (routeKey, _access.ResolveWeight(routeKey, attr.Default));
     }
+
+    private static string OutcomeTag(ChargeOutcome outcome) => outcome switch
+    {
+        ChargeOutcome.Allowed => "allowed",
+        ChargeOutcome.BurstExceeded => "burst_exceeded",
+        ChargeOutcome.BudgetExceeded => "budget_exceeded",
+        _ => "unknown",
+    };
 
     private static ObjectResult TooMany(ChargeResult charge)
     {

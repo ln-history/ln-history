@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using System.Text.Json;
+using LN_history.Api.Instrumentation;
 using LN_history.Core.Auth;
+using Microsoft.Extensions.Logging;
 
 namespace LN_history.Api.Infrastructure;
 
@@ -13,10 +16,15 @@ namespace LN_history.Api.Infrastructure;
 public sealed class ApiKeyAuthMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<ApiKeyAuthMiddleware> _logger;
 
-    public ApiKeyAuthMiddleware(RequestDelegate next) => _next = next;
+    public ApiKeyAuthMiddleware(RequestDelegate next, ILogger<ApiKeyAuthMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
+    }
 
-    public async Task InvokeAsync(HttpContext context, IApiAccessService access)
+    public async Task InvokeAsync(HttpContext context, IApiAccessService access, AppMetrics metrics)
     {
         if (context.Request.Path.StartsWithSegments("/swagger"))
         {
@@ -27,6 +35,9 @@ public sealed class ApiKeyAuthMiddleware
         var presented = ExtractKey(context.Request);
         if (string.IsNullOrEmpty(presented))
         {
+            metrics.AuthResults.Add(1, new KeyValuePair<string, object?>("result", "missing_key"));
+            _logger.LogInformation("Rejected {Method} {Path}: no API key presented.",
+                context.Request.Method, context.Request.Path);
             await WriteProblemAsync(context, "API key is missing.");
             return;
         }
@@ -34,8 +45,24 @@ public sealed class ApiKeyAuthMiddleware
         var record = access.Authenticate(presented);
         if (record is null)
         {
+            metrics.AuthResults.Add(1, new KeyValuePair<string, object?>("result", "invalid_key"));
+            // The key itself is never logged — only the fact that one was presented and rejected.
+            _logger.LogWarning("Rejected {Method} {Path}: unknown, disabled or expired API key.",
+                context.Request.Method, context.Request.Path);
             await WriteProblemAsync(context, "Invalid or expired API key.");
             return;
+        }
+
+        metrics.AuthResults.Add(1, new KeyValuePair<string, object?>("result", "ok"));
+
+        // Tag the server span so a trace in Tempo can be attributed to a tenant. Cardinality is the
+        // number of issued keys (a handful), and these are span attributes only — Tempo's
+        // span-metrics dimensions are configured separately, so no metric series are added.
+        var activity = Activity.Current;
+        if (activity is not null)
+        {
+            activity.SetTag("lnhistory.key.owner", record.OwnerLabel);
+            activity.SetTag("lnhistory.key.role", record.IsAdmin ? "admin" : "researcher");
         }
 
         ApiKeyContext.Set(context, record);

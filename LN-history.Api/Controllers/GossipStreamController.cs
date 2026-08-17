@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Net.WebSockets;
 using Asp.Versioning;
 using LN_history.Api.Infrastructure;
+using LN_history.Api.Instrumentation;
 using LN_history.Core.Auth;
 using LN_history.Core.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -28,12 +30,18 @@ public class GossipStreamController : ControllerBase
 
     private readonly IGossipStreamService _stream;
     private readonly IApiAccessService _access;
+    private readonly AppMetrics _metrics;
     private readonly ILogger<GossipStreamController> _logger;
 
-    public GossipStreamController(IGossipStreamService stream, IApiAccessService access, ILogger<GossipStreamController> logger)
+    public GossipStreamController(
+        IGossipStreamService stream,
+        IApiAccessService access,
+        AppMetrics metrics,
+        ILogger<GossipStreamController> logger)
     {
         _stream = stream;
         _access = access;
+        _metrics = metrics;
         _logger = logger;
     }
 
@@ -65,6 +73,9 @@ public class GossipStreamController : ControllerBase
         {
             if (!_access.TryAcquireStream(record))
             {
+                _metrics.StreamRejections.Add(1);
+                _logger.LogWarning("Refused stream upgrade for {Owner}: already at the concurrent-connection cap.",
+                    record.OwnerLabel);
                 HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 await HttpContext.Response.WriteAsync("Too many concurrent stream connections for this key.", cancellationToken);
                 return;
@@ -100,23 +111,41 @@ public class GossipStreamController : ControllerBase
             using var subscription = _stream.Subscribe(typeFilter);
             var lastSent = long.MinValue;
 
+            _metrics.StreamConnections.Add(1);
+            var connectedFor = Stopwatch.StartNew();
+
+            // A server that only ever sends never observes a client-initiated close handshake: the
+            // close frame sits unread, the socket stays Open, and this connection would keep its
+            // stream slot and subscriber buffer until the TCP connection itself died. Draining the
+            // receive side turns a clean client close into prompt cancellation of the send loop.
+            using var connectionCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var drain = DrainClientAsync(socket, connectionCts);
+
             try
             {
+                var token = connectionCts.Token;
+
                 if (since is { } cursor2)
                 {
-                    var backlog = await _stream.GetBackfillAsync(cursor2, typeFilter, MaxBackfill, cancellationToken);
+                    var backlog = await _stream.GetBackfillAsync(cursor2, typeFilter, MaxBackfill, token);
                     foreach (var frame in backlog)
                     {
-                        await SendAsync(socket, frame.RawGossip, cancellationToken);
+                        await SendAsync(socket, frame.RawGossip, token);
                         lastSent = frame.InternalId;
                     }
                 }
 
-                await foreach (var frame in subscription.ReadAllAsync(cancellationToken))
+                // The high-water mark is FROZEN at the end of the backfill. Advancing it with every
+                // live frame instead would silently drop any frame that arrives out of internal_id
+                // order — and NOTIFY order is commit order, which is not guaranteed to match the
+                // order in which ids were assigned when writers commit concurrently. Only the
+                // backfill seam needs dedup, so only the seam is filtered.
+                var seam = lastSent;
+
+                await foreach (var frame in subscription.ReadAllAsync(token))
                 {
-                    if (frame.InternalId <= lastSent) continue; // already delivered by the backfill above
-                    await SendAsync(socket, frame.RawGossip, cancellationToken);
-                    lastSent = frame.InternalId;
+                    if (frame.InternalId <= seam) continue; // already delivered by the backfill above
+                    await SendAsync(socket, frame.RawGossip, token);
                 }
             }
             catch (OperationCanceledException)
@@ -129,13 +158,54 @@ public class GossipStreamController : ControllerBase
             }
             finally
             {
+                connectionCts.Cancel();
+                await drain;   // never throws; must finish before CloseAsync touches the socket
                 await CloseQuietlyAsync(socket);
+                _metrics.StreamDuration.Record(connectedFor.Elapsed.TotalSeconds);
             }
         }
         finally
         {
             if (slotHeld && record is not null)
                 _access.ReleaseStream(record);
+        }
+    }
+
+    /// <summary>
+    /// Reads and discards anything the client sends, purely so a close frame is observed, and
+    /// cancels <paramref name="connectionCts"/> when the client goes away so the send loop unblocks
+    /// instead of sitting on <c>ReadAllAsync</c> forever. Never throws — it is awaited from a
+    /// finally block.
+    /// </summary>
+    private static async Task DrainClientAsync(WebSocket socket, CancellationTokenSource connectionCts)
+    {
+        var scratch = new byte[128];
+        try
+        {
+            while (!connectionCts.IsCancellationRequested)
+            {
+                var result = await socket.ReceiveAsync(scratch, connectionCts.Token);
+                if (result.MessageType == WebSocketMessageType.Close) return;
+                // Clients are not expected to send data frames; ignore whatever arrives.
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Teardown initiated by the send side.
+        }
+        catch (WebSocketException)
+        {
+            // Peer vanished; the send loop will fail too.
+        }
+        catch (ObjectDisposedException)
+        {
+            // Socket already torn down.
+        }
+        finally
+        {
+            // Without this the send loop would keep waiting for the next gossip frame on a socket
+            // whose client has already left, holding its stream slot and subscriber buffer.
+            try { await connectionCts.CancelAsync(); } catch (ObjectDisposedException) { }
         }
     }
 
