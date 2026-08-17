@@ -66,6 +66,7 @@ public static class DomainToDtoMapper
         ScidStr = ScidStr(c.Scid),
         FundingTimestamp = c.FundingTimestamp,
         ClosingTimestamp = c.ClosingTimestamp,
+        AnnounceableTimestamp = c.AnnounceableTimestamp,
         ClosingInformation = c.Closure?.ToDto(),
         CapacitySat = c.CapacitySat,
         NodeId1 = c.NodeId1,

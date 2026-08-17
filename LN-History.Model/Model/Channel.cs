@@ -13,6 +13,13 @@ public class Channel
     public DateTime FundingTimestamp { get; set; }
     public DateTime? ClosingTimestamp { get; set; }
 
+    /// <summary>
+    /// Block-header timestamp of block (funding_height + 5) — the block at which the funding
+    /// tx reaches 6 confirmations (BOLT 7 announceable threshold). Null until chain-enricher
+    /// backfills it; recently-ingested channels may still be null.
+    /// </summary>
+    public DateTime? AnnounceableTimestamp { get; set; }
+
     /// <summary>Closure details when the channel is closed; null while open.</summary>
     public ChannelClosure? Closure { get; set; }
 
